@@ -322,15 +322,38 @@ function Login({ onSignIn }: { onSignIn: (s: any) => void }) {
       return;
     }
 
+    if (isSignUp) {
+      setMsg("Creating student account...");
+      try {
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setMsg(data.error || "Failed to create account.");
+          return;
+        }
+        if (data.session) {
+          localStorage.setItem("gapfinder_demo_session", JSON.stringify(data.session));
+          onSignIn(data.session);
+          return;
+        }
+        setMsg("Account created! Please sign in.");
+      } catch (err: any) {
+        setMsg(err.message || "Failed to create account.");
+      }
+      return;
+    }
+
     try {
       setMsg("");
-      const res = isSignUp
-        ? await sb.auth.signUp({ email, password })
-        : await sb.auth.signInWithPassword({ email, password });
+      const res = await sb.auth.signInWithPassword({ email, password });
       if (res.error) {
         setMsg(res.error.message);
-      } else if (isSignUp) {
-        setMsg("Account created. Please sign in.");
+      } else if (res.data?.session) {
+        onSignIn(res.data.session);
       }
     } catch (err: any) {
       setMsg(err.message || "Failed to authenticate.");

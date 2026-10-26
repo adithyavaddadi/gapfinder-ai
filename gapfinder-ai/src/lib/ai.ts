@@ -1,6 +1,6 @@
 const K = process.env.GEMINI_API_KEY || "";
 const G = "https://generativelanguage.googleapis.com/v1beta/models/";
-const M = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const M = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
 const post = async (u: string, b: any) =>
   (await fetch(u, {
@@ -49,14 +49,17 @@ export async function embed(texts: string[]): Promise<number[][]> {
 
 // Generation side: only ever called with retrieved excerpts inside the prompt
 export async function gen(prompt: string, json = true): Promise<any> {
-  try {
-    const j = await post(`${G}${M}:generateContent?key=${K}`, {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: json ? { responseMimeType: "application/json", temperature: 0.3 } : { temperature: 0.2 }
-    });
-    const t = j.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (t) return json ? JSON.parse(t) : t;
-  } catch {}
+  const candidateModels = ["gemini-3.5-flash", "gemini-flash-latest", M];
+  for (const model of candidateModels) {
+    try {
+      const j = await post(`${G}${model}:generateContent?key=${K}`, {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: json ? { responseMimeType: "application/json", temperature: 0.3 } : { temperature: 0.2 }
+      });
+      const t = j.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (t) return json ? JSON.parse(t) : t;
+    } catch {}
+  }
 
   // If Gemini quota is exceeded or unavailable, return structured fallback
   if (json) {
@@ -68,8 +71,17 @@ export async function gen(prompt: string, json = true): Promise<any> {
         "Transaction Processing & ACID Properties",
         "Concurrency Control & Two-Phase Locking",
         "Crash Recovery & Write-Ahead Logging"
+      ],
+      plan: [
+        { day: 1, topic: "Normalization (1NF to BCNF)", minutes: 90, focus: "Decomposition and dependency preservation" },
+        { day: 2, topic: "Transaction ACID Properties", minutes: 90, focus: "Isolation levels and concurrency anomalies" },
+        { day: 3, topic: "Indexing & B+ Trees", minutes: 75, focus: "Search keys, tree splits, and disk I/O costs" },
+        { day: 4, topic: "Concurrency Control (2PL)", minutes: 75, focus: "Strict 2PL, deadlock prevention protocols" },
+        { day: 5, topic: "Crash Recovery & WAL", minutes: 60, focus: "Checkpointing, undo/redo phase analysis" },
+        { day: 6, topic: "Relational Algebra", minutes: 60, focus: "Joins, projections, and Cartesian products" },
+        { day: 7, topic: "Comprehensive Mock Review", minutes: 90, focus: "Full subject diagnostic and weak topic mastery" }
       ]
     };
   }
-  return "Comprehensive analysis of core subject concepts.";
+  return "In database management systems, data is structured into tables with primary and foreign keys to ensure integrity, consistency, and efficient indexing.";
 }
