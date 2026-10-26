@@ -3,6 +3,13 @@
 > **"Find what you don't know you don't know."**  
 > Students often study everything equally and still miss what they don't know. GapFinder AI takes a student's syllabus, textbook chapters, notes, and past question papers, finds their weak areas, and builds a personalized, prioritized revision plan.
 
+[![Live App](https://img.shields.io/badge/Live%20App-gapfinder--ai--kappa.vercel.app-7928CA?style=for-the-badge&logo=vercel)](https://gapfinder-ai-kappa.vercel.app)
+[![User Guide](https://img.shields.io/badge/User%20Guide-Walkthrough%20%26%20Testing-blue?style=for-the-badge)](./USER_GUIDE.md)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/adithyavaddadi/gapfinder-ai)
+
+🔗 **Live Application URL:** [https://gapfinder-ai-kappa.vercel.app](https://gapfinder-ai-kappa.vercel.app)  
+📖 **Step-by-Step Testing Walkthrough:** See [USER_GUIDE.md](./USER_GUIDE.md)
+
 ---
 
 ## 1. Problem Statement
