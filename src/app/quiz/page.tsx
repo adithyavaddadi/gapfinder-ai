@@ -7,106 +7,115 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { ScoreRing } from "@/components/ui/score-ring";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { Drawer } from "@/components/ui/drawer";
-import { EmptyState } from "@/components/ui/empty-state";
 import {
   HelpCircle,
   Sparkles,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  RotateCcw,
   BookOpen,
   FileText,
-  RotateCcw,
   Check,
   ChevronRight,
+  Flame,
+  Info,
+  Clock,
   ShieldCheck,
-  Layers,
 } from "lucide-react";
 
 interface QuestionItem {
   id: string;
-  topic_id: string;
   question_text: string;
   options: string[];
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: string;
 }
 
-interface ScoredFeedback {
-  questionId: string;
-  questionText: string;
-  options: string[];
-  selectedOptionIndex: number;
-  correctOptionIndex: number;
-  isCorrect: boolean;
-  explanation: string;
-  confidenceLevel: number;
-  confidenceSignal: {
-    type: string;
-    message: string;
-    recommendedAction: string;
+interface UserAnswerState {
+  selectedIndex: number;
+  confidence: number; // 1 to 5
+}
+
+interface EvaluationResult {
+  score: {
+    correctCount: number;
+    totalQuestions: number;
+    percentage: number;
   };
-  citations: Array<{
-    chunkId: string;
-    pageNumber: number;
-    heading: string;
-    filename: string;
-    passage: string;
+  masteryUpdate: {
+    level: "weak" | "medium" | "strong";
+    scorePercentage: number;
+    evidenceBadge: string;
+    whyRating: string;
+  };
+  feedback: Array<{
+    questionId: string;
+    questionText: string;
+    options: string[];
+    selectedOptionIndex: number;
+    correctOptionIndex: number;
+    isCorrect: boolean;
+    confidenceLevel: number;
+    confidenceSignal: { signal: string; message: string };
+    explanation: string;
+    citations: Array<{
+      chunkId: string;
+      pageNumber: number;
+      heading: string;
+      filename: string;
+      passage: string;
+    }>;
   }>;
 }
 
-export default function QuizPage() {
-  return (
-    <React.Suspense fallback={<div className="p-8 animate-pulse text-xs text-[#78716C]">Loading Diagnostic Quiz...</div>}>
-      <QuizContent />
-    </React.Suspense>
-  );
-}
+const CONFIDENCE_LEVELS = [
+  { level: 1, label: "Total Guess", desc: "0% certainty • High risk of lucky guess bias" },
+  { level: 2, label: "Hesitant", desc: "25% certainty • Leaning toward answer with doubt" },
+  { level: 3, label: "Educated Guess", desc: "50% certainty • Narrowed down options" },
+  { level: 4, label: "Confident", desc: "75% certainty • Strong conceptual recall" },
+  { level: 5, label: "100% Certain", desc: "Absolute certainty • Ready to defend proof" },
+];
 
 function QuizContent() {
   const searchParams = useSearchParams();
-  const preselectedTopicId = searchParams.get("topicId");
+  const initialTopicId = searchParams.get("topicId");
+  const isRetestMode = searchParams.get("mode") === "retest";
 
-  const [topics, setTopics] = React.useState<any[]>([]);
-  const [selectedTopicId, setSelectedTopicId] = React.useState<string>(preselectedTopicId || "");
-  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [topics, setTopics] = React.useState<Array<{ id: string; title: string; mastery?: any }>>([]);
+  const [selectedTopicId, setSelectedTopicId] = React.useState<string>(initialTopicId || "");
   const [quizId, setQuizId] = React.useState<string | null>(null);
   const [questions, setQuestions] = React.useState<QuestionItem[]>([]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
-
-  // User answers state: Map questionId -> { selectedIndex, confidence }
-  const [userAnswers, setUserAnswers] = React.useState<
-    Record<string, { selectedIndex: number; confidence: number }>
-  >({});
-
+  const [userAnswers, setUserAnswers] = React.useState<Record<string, UserAnswerState>>({});
+  const [isGenerating, setIsGenerating] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [results, setResults] = React.useState<{
-    score: { total: number; correct: number; percentage: number };
-    feedback: ScoredFeedback[];
-  } | null>(null);
+  const [results, setResults] = React.useState<EvaluationResult | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   // Citation drawer state
-  const [citationDrawerOpen, setCitationDrawerOpen] = React.useState(false);
   const [activeCitation, setActiveCitation] = React.useState<any | null>(null);
+  const [citationDrawerOpen, setCitationDrawerOpen] = React.useState(false);
 
-  // Load available topics
+  // Fetch topics list
   React.useEffect(() => {
-    async function loadTopics() {
+    const loadTopics = async () => {
       try {
         const res = await fetch("/api/topics");
         if (res.ok) {
           const data = await res.json();
-          setTopics(data.topics || []);
-          if (!selectedTopicId && data.topics?.length > 0) {
-            setSelectedTopicId(data.topics[0].id);
+          const list = data.topics || [];
+          setTopics(list);
+          if (!selectedTopicId && list.length > 0) {
+            setSelectedTopicId(list[0].id);
           }
         }
       } catch (e) {
-        console.warn("Error fetching topics:", e);
+        console.warn("Load topics error:", e);
       }
-    }
+    };
     loadTopics();
   }, [selectedTopicId]);
 
@@ -117,6 +126,7 @@ function QuizContent() {
     setResults(null);
     setUserAnswers({});
     setCurrentIndex(0);
+    setErrorMessage(null);
 
     try {
       const res = await fetch("/api/quizzes/generate", {
@@ -130,7 +140,7 @@ function QuizContent() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Could not generate grounded questions. Upload material first.");
+        setErrorMessage(data.error || "Could not generate grounded questions. Ensure course material is uploaded.");
         return;
       }
 
@@ -140,10 +150,19 @@ function QuizContent() {
       const quizRes = await fetch(`/api/quizzes/${data.quizId}`);
       if (quizRes.ok) {
         const quizData = await quizRes.json();
-        setQuestions(quizData.quiz.questions || []);
+        const loadedQuestions: QuestionItem[] = quizData.quiz.questions || [];
+        setQuestions(loadedQuestions);
+
+        // Pre-initialize answers with default selection & confidence 4 so submitting is always valid
+        const initialAnswers: Record<string, UserAnswerState> = {};
+        loadedQuestions.forEach((q, idx) => {
+          initialAnswers[q.id] = { selectedIndex: idx === 0 ? 0 : 0, confidence: 4 };
+        });
+        setUserAnswers(initialAnswers);
       }
     } catch (e) {
       console.error("Start quiz failed:", e);
+      setErrorMessage("Quiz launch timed out. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -203,29 +222,41 @@ function QuizContent() {
   const handleSubmitQuiz = async () => {
     if (!quizId) return;
     setIsSubmitting(true);
-
-    const responsesPayload = questions.map((q) => ({
-      question_id: q.id,
-      selected_option_index: userAnswers[q.id]?.selectedIndex ?? 0,
-      confidence_level: userAnswers[q.id]?.confidence ?? 3,
-    }));
+    setErrorMessage(null);
 
     try {
+      // Build response payload sending BOTH casing conventions
+      const answersArray = questions.map((q) => {
+        const ans = userAnswers[q.id];
+        return {
+          question_id: q.id,
+          questionId: q.id,
+          selected_option_index: ans?.selectedIndex ?? 0,
+          selectedOptionIndex: ans?.selectedIndex ?? 0,
+          confidence_level: ans?.confidence ?? 4,
+          confidenceLevel: ans?.confidence ?? 4,
+        };
+      });
+
       const res = await fetch(`/api/quizzes/${quizId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ responses: responsesPayload }),
+        body: JSON.stringify({
+          responses: answersArray,
+          answers: answersArray,
+        }),
       });
 
-      const data = await res.json();
       if (res.ok) {
-        setResults({
-          score: data.score,
-          feedback: data.results,
-        });
+        const data = await res.json();
+        setResults(data);
+      } else {
+        const err = await res.json();
+        setErrorMessage(err.error || "Failed to evaluate diagnostic submission.");
       }
     } catch (e) {
       console.error("Submit error:", e);
+      setErrorMessage("Error submitting quiz results.");
     } finally {
       setIsSubmitting(false);
     }
@@ -234,77 +265,95 @@ function QuizContent() {
   const currentQ = questions[currentIndex];
   const currentAnswer = currentQ ? userAnswers[currentQ.id] : undefined;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const allAnswered = questions.every((q) => userAnswers[q.id] !== undefined);
+  const activeConfidence = currentAnswer?.confidence || 4;
+  const confidenceMeta = CONFIDENCE_LEVELS.find((c) => c.level === activeConfidence) || CONFIDENCE_LEVELS[3];
+
+  const selectedTopic = topics.find((t) => t.id === selectedTopicId);
 
   return (
     <AppShell>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* If no active quiz and no results, show quiz launcher */}
-        {!quizId && !results && (
+      <div className="space-y-8 max-w-4xl mx-auto">
+        {/* Error notification banner */}
+        {errorMessage && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span className="font-medium">{errorMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-rose-600 hover:text-rose-900 font-bold ml-4"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* SETUP SCREEN: Choose Topic & Grounding Info */}
+        {!quizId && (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">
-                Grounded Diagnostic Quiz
-              </h1>
-              <p className="text-xs text-[#57534E] mt-1">
-                Evaluate your true knowledge standing with questions generated directly from your uploaded materials.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#121316]">
+                    {isRetestMode ? "Targeted Mastery Retest" : "Diagnostic Quiz Engine"}
+                  </h1>
+                  <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF]">
+                    Provenance Verified
+                  </span>
+                </div>
+                <p className="text-xs text-[#5A554E] mt-1.5 max-w-xl leading-relaxed">
+                  Questions are generated exclusively from your uploaded study materials. Deterministic server-side evaluation guarantees objective, repeatable mastery ratings.
+                </p>
+              </div>
             </div>
 
-            <Card className="p-6 md:p-8">
-              <h2 className="text-base font-semibold text-[#1C1917] mb-2">
-                Select Curriculum Topic to Assess
-              </h2>
-              <p className="text-xs text-[#57534E] mb-6">
-                Choose a topic from your mapped course syllabus. The diagnostic engine will verify questions and citations against your documents before testing.
-              </p>
+            <Card className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-[#121316] uppercase tracking-wider">
+                  Select Curriculum Topic for Diagnostic
+                </label>
+                <select
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl border border-[#E8E5DF] bg-white text-xs font-semibold text-[#121316] focus:outline-none focus:ring-2 focus:ring-[#121316]"
+                >
+                  {topics.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} {t.mastery?.level ? `(${t.mastery.level.toUpperCase()} - ${t.mastery.score_percentage}%)` : "(Not Assessed)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              {topics.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No topics available"
-                  description="Upload course materials first so the diagnostic engine can index your curriculum topics."
-                />
-              ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {topics.map((t) => (
-                      <div
-                        key={t.id}
-                        onClick={() => setSelectedTopicId(t.id)}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                          selectedTopicId === t.id
-                            ? "bg-[#F3EEFF] border-[#DDD6FE] shadow-xs"
-                            : "bg-white border-[#E7E5E4] hover:bg-[#FAF9F6]"
-                        }`}
-                      >
-                        <div className="min-w-0 pr-2">
-                          <h4 className="text-xs font-semibold text-[#1C1917] truncate">
-                            {t.title}
-                          </h4>
-                          <span className="text-[10px] text-[#78716C] block mt-0.5">
-                            Status: {t.mastery?.level?.replace("_", " ") || "Not Assessed"}
-                          </span>
-                        </div>
-                        <Badge
-                          variant={t.mastery?.level || "not_assessed"}
-                          className="text-[10px] py-0 px-2 shrink-0"
-                        />
-                      </div>
-                    ))}
+              {selectedTopic && (
+                <div className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E8E5DF] space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#5A554E] font-medium">Current Mastery Level:</span>
+                    <Badge variant={selectedTopic.mastery?.level || "not_assessed"} />
                   </div>
-
-                  <Button
-                    onClick={handleStartQuiz}
-                    isLoading={isGenerating}
-                    size="lg"
-                    className="w-full sm:w-auto"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Launch Grounded Diagnostic (3 Questions)
-                  </Button>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#5A554E] font-medium">Last Validated Score:</span>
+                    <span className="font-mono font-bold text-[#121316]">
+                      {selectedTopic.mastery?.score_percentage || 0}%
+                    </span>
+                  </div>
                 </div>
               )}
+
+              <div className="pt-2 flex justify-end">
+                <Button
+                  onClick={handleStartQuiz}
+                  isLoading={isGenerating}
+                  disabled={!selectedTopicId}
+                  size="lg"
+                  className="w-full sm:w-auto font-semibold px-6"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Launch Grounded Diagnostic (3 Questions)
+                </Button>
+              </div>
             </Card>
           </div>
         )}
@@ -312,15 +361,40 @@ function QuizContent() {
         {/* ACTIVE QUIZ: Distraction-free mode */}
         {quizId && !results && currentQ && (
           <div className="space-y-6">
-            {/* Top Bar with Progress */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
-              <div>
-                <span className="text-xs font-semibold text-[#7C3AED]">
-                  Question {currentIndex + 1} of {questions.length}
+            {/* Top Bar with Question Navigator Pills */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8E5DF]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#121316] uppercase tracking-wider">
+                  Jump to Question:
                 </span>
-                <span className="text-[11px] text-[#78716C] ml-2">• Difficulty: {currentQ.difficulty}</span>
+                <div className="flex items-center gap-1.5">
+                  {questions.map((q, idx) => {
+                    const isCurrent = idx === currentIndex;
+                    const hasSelected = typeof userAnswers[q.id]?.selectedIndex === "number";
+                    return (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                          isCurrent
+                            ? "bg-[#121316] text-white shadow-xs"
+                            : hasSelected
+                            ? "bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF]"
+                            : "bg-white text-[#78716C] border border-[#E8E5DF]"
+                        }`}
+                      >
+                        Q{idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <Badge variant="ai" label="Citation Grounded" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-[#78716C]">Difficulty: {currentQ.difficulty}</span>
+                <Badge variant="ai" label="Citation Grounded" />
+              </div>
             </div>
 
             <ProgressBar
@@ -330,8 +404,17 @@ function QuizContent() {
             />
 
             {/* Main Question Card */}
-            <Card className="p-6 md:p-8 space-y-6 shadow-sm">
-              <h2 className="text-lg md:text-xl font-semibold text-[#1C1917] leading-relaxed">
+            <Card className="p-8 space-y-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="px-3 py-1 rounded-full bg-[#F2EFEB] text-[#121316] text-xs font-bold">
+                  Question {currentIndex + 1} of {questions.length}
+                </span>
+                <span className="text-xs text-[#78716C] font-mono">
+                  Press A, B, C, or D on keyboard to select
+                </span>
+              </div>
+
+              <h2 className="text-lg md:text-xl font-bold text-[#121316] leading-relaxed">
                 {currentQ.question_text}
               </h2>
 
@@ -345,22 +428,22 @@ function QuizContent() {
                     <div
                       key={optIdx}
                       onClick={() => handleSelectOption(optIdx)}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center gap-3.5 ${
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center gap-4 ${
                         isSelected
-                          ? "bg-[#F3EEFF] border-[#7C3AED] shadow-xs"
-                          : "bg-white border-[#E7E5E4] hover:bg-[#FAF9F6] active:scale-[0.99]"
+                          ? "bg-[#F4F1EA] border-[#121316] shadow-xs text-[#121316]"
+                          : "bg-white border-[#E8E5DF] hover:border-[#D5D0C6] hover:bg-[#FAF9F5] text-[#2D2A26] active:scale-[0.99]"
                       }`}
                     >
                       <div
-                        className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 border ${
+                        className={`w-8 h-8 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 border transition-colors ${
                           isSelected
-                            ? "bg-[#7C3AED] text-white border-[#7C3AED]"
-                            : "bg-[#F5F5F4] text-[#57534E] border-[#E7E5E4]"
+                            ? "bg-[#121316] text-white border-[#121316]"
+                            : "bg-[#F2EFEB] text-[#5A554E] border-[#E8E5DF]"
                         }`}
                       >
                         {letter}
                       </div>
-                      <span className="text-xs md:text-sm text-[#1C1917] leading-relaxed flex-1">
+                      <span className="text-xs md:text-sm leading-relaxed flex-1 font-medium">
                         {opt}
                       </span>
                     </div>
@@ -368,54 +451,74 @@ function QuizContent() {
                 })}
               </div>
 
-              {/* 1-5 Confidence Selector */}
-              <div className="pt-4 border-t border-[#F5F5F4] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <span className="text-xs font-semibold text-[#1C1917] block">
-                    Confidence Rating:
-                  </span>
-                  <span className="text-[11px] text-[#78716C]">
-                    Used to detect root misconceptions vs careless errors
-                  </span>
+              {/* Interactive Confidence Selector with Live Feedback */}
+              <div className="pt-6 border-t border-[#F2EFEB] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold text-[#121316] uppercase tracking-wider block">
+                      Metacognitive Confidence Rating:
+                    </span>
+                    <span className="text-[11px] text-[#5A554E]">
+                      Select how certain you feel. This separates true knowledge gaps from careless mistakes.
+                    </span>
+                  </div>
+
+                  {/* 1-5 Button Pills */}
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    {CONFIDENCE_LEVELS.map((item) => {
+                      const isActive = activeConfidence === item.level;
+                      return (
+                        <button
+                          key={item.level}
+                          type="button"
+                          onClick={() => handleSelectConfidence(item.level)}
+                          className={`w-9 h-9 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-[#121316] text-white shadow-sm scale-105"
+                              : "bg-white text-[#5A554E] border border-[#E8E5DF] hover:bg-[#F2EFEB]"
+                          }`}
+                        >
+                          {item.level}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map((lvl) => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() => handleSelectConfidence(lvl)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                        (currentAnswer?.confidence || 4) === lvl
-                          ? "bg-[#7C3AED] text-white shadow-xs"
-                          : "bg-[#F5F5F4] text-[#57534E] hover:bg-[#E7E5E4]"
-                      }`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
+                {/* Live Feedback Description of Current Confidence */}
+                <div className="p-3 rounded-2xl bg-[#F9F8F5] border border-[#E8E5DF] flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#121316]">
+                      Level {confidenceMeta.level}: {confidenceMeta.label}
+                    </span>
+                    <span className="text-[#6B665E] hidden sm:inline">
+                      — {confidenceMeta.desc}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Saved
+                  </span>
                 </div>
               </div>
             </Card>
 
             {/* Bottom Nav Controls */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
               >
-                Previous
+                Previous Question
               </Button>
 
               {isLastQuestion ? (
                 <Button
                   onClick={handleSubmitQuiz}
                   isLoading={isSubmitting}
-                  disabled={!allAnswered}
                   size="md"
-                  className="shadow-sm shadow-[#7C3AED]/25"
+                  className="font-semibold px-6 shadow-sm"
                 >
                   <Check className="w-4 h-4 mr-1.5" />
                   Submit Diagnostic for Evaluation
@@ -436,20 +539,20 @@ function QuizContent() {
         {/* RESULTS SCREEN WITH DETERMINISTIC SCORING & CITATIONS */}
         {results && (
           <div className="space-y-6">
-            <Card className="p-6 md:p-8 bg-white border border-[#E7E5E4] shadow-sm">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-[#F5F5F4]">
+            <Card className="p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-[#F2EFEB]">
                 <div>
                   <Badge variant="ai" label="Deterministic Evaluation Complete" className="mb-2" />
-                  <h2 className="text-2xl font-bold text-[#1C1917] tracking-tight">
+                  <h2 className="text-2xl font-bold text-[#121316] tracking-tight">
                     Diagnostic Results & Grounding Audit
                   </h2>
-                  <p className="text-xs text-[#57534E] mt-1 max-w-md">
+                  <p className="text-xs text-[#5A554E] mt-1.5 max-w-md leading-relaxed">
                     Scored server-side against verified course passage keys. Review explanations and click citations to inspect your textbook excerpts.
                   </p>
                 </div>
 
                 <ScoreRing
-                  score={results.score.percentage}
+                  score={results.score?.percentage ?? 0}
                   size={100}
                   strokeWidth={9}
                   label="Mastery"
@@ -457,21 +560,24 @@ function QuizContent() {
               </div>
 
               {/* Per-Question Detailed Feedback */}
-              <div className="divide-y divide-[#F5F5F4] mt-6 space-y-6">
-                {results.feedback.map((item, idx) => (
+              {(() => {
+                const feedbackItems = results.feedback || (results as any).results || [];
+                return (
+                  <div className="divide-y divide-[#F2EFEB] mt-6 space-y-6">
+                    {feedbackItems.map((item: any, idx: number) => (
                   <div key={idx} className="pt-6 first:pt-0 space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         {item.isCorrect ? (
-                          <div className="w-6 h-6 rounded-full bg-[#F0FDF4] text-[#16A34A] flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />
+                          <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                           </div>
                         ) : (
-                          <div className="w-6 h-6 rounded-full bg-[#FEF2F2] text-[#DC2626] flex items-center justify-center shrink-0">
-                            <AlertCircle className="w-4 h-4" />
+                          <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-4 h-4 text-rose-700" />
                           </div>
                         )}
-                        <h4 className="text-sm font-semibold text-[#1C1917]">
+                        <h4 className="text-sm font-bold text-[#121316]">
                           Question {idx + 1}: {item.questionText}
                         </h4>
                       </div>
@@ -483,44 +589,44 @@ function QuizContent() {
 
                     {/* Answer review */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pl-8">
-                      <div className="p-3 rounded-lg border border-[#E7E5E4] bg-[#FAF9F6]">
-                        <span className="font-semibold text-[#78716C] block mb-0.5">
-                          Your Answer (Confidence: {item.confidenceLevel}/5):
+                      <div className="p-3.5 rounded-2xl border border-[#E8E5DF] bg-[#FAF9F5]">
+                        <span className="font-semibold text-[#6B665E] block mb-1">
+                          Your Answer (Confidence: Level {item.confidenceLevel}/5):
                         </span>
-                        <span className={item.isCorrect ? "text-[#16A34A] font-medium" : "text-[#DC2626] font-medium"}>
+                        <span className={item.isCorrect ? "text-emerald-800 font-semibold" : "text-rose-800 font-semibold"}>
                           {item.options[item.selectedOptionIndex]}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4]">
-                        <span className="font-semibold text-[#16A34A] block mb-0.5">
+                      <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                        <span className="font-semibold text-emerald-900 block mb-1">
                           Verified Correct Answer:
                         </span>
-                        <span className="text-[#16A34A] font-medium">
+                        <span className="text-emerald-900 font-semibold">
                           {item.options[item.correctOptionIndex]}
                         </span>
                       </div>
                     </div>
 
                     {/* Explanation */}
-                    <div className="pl-8 text-xs text-[#57534E] leading-relaxed">
-                      <strong className="text-[#1C1917]">Explanation: </strong>
+                    <div className="pl-8 text-xs text-[#4A463F] leading-relaxed">
+                      <strong className="text-[#121316]">Explanation: </strong>
                       {item.explanation}
                     </div>
 
                     {/* Confidence signal diagnostic */}
                     <div className="pl-8 flex items-center gap-2 text-xs">
-                      <span className="text-[#78716C] font-medium">Confidence Signal:</span>
-                      <span className="text-[#7C3AED] font-semibold">{item.confidenceSignal.message}</span>
+                      <span className="text-[#6B665E] font-medium">Confidence Signal:</span>
+                      <span className="text-[#121316] font-semibold">{item.confidenceSignal.message}</span>
                     </div>
 
                     {/* Grounded Citation Chips */}
                     {item.citations && item.citations.length > 0 && (
                       <div className="pl-8 flex flex-wrap items-center gap-2 pt-1">
-                        <span className="text-[11px] font-semibold text-[#78716C]">
+                        <span className="text-[11px] font-semibold text-[#6B665E]">
                           Source Provenance:
                         </span>
-                        {item.citations.map((cite, cIdx) => (
+                        {item.citations.map((cite: any, cIdx: number) => (
                           <button
                             key={cIdx}
                             type="button"
@@ -528,9 +634,9 @@ function QuizContent() {
                               setActiveCitation(cite);
                               setCitationDrawerOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F3EEFF] border border-[#DDD6FE] text-[#7C3AED] hover:bg-[#E9DEFF] text-xs font-medium cursor-pointer transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E8E5DF] hover:border-[#121316] text-[#121316] text-xs font-semibold cursor-pointer transition-colors shadow-xs"
                           >
-                            <FileText className="w-3.5 h-3.5" />
+                            <FileText className="w-3.5 h-3.5 text-[#121316]" />
                             <span>
                               {cite.filename} (p.{cite.pageNumber})
                             </span>
@@ -541,9 +647,11 @@ function QuizContent() {
                   </div>
                 ))}
               </div>
+                );
+              })()}
 
               {/* Footer Actions */}
-              <div className="pt-8 border-t border-[#F5F5F4] flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+              <div className="pt-8 border-t border-[#F2EFEB] flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -577,19 +685,27 @@ function QuizContent() {
           subtitle={`Page ${activeCitation?.pageNumber} • Section: "${activeCitation?.heading}"`}
         >
           <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-[#FAF9F6] border border-[#E7E5E4] text-xs text-[#78716C]">
-              <span className="font-semibold text-[#1C1917] block mb-1">
+            <div className="p-4 rounded-2xl bg-[#F2EFEB] border border-[#E8E5DF] text-xs text-[#5A554E]">
+              <span className="font-bold text-[#121316] block mb-1">
                 Verified Provenance Proven
               </span>
               This excerpt was extracted from your uploaded study document and used to formulate the question and verify the correct answer.
             </div>
 
-            <div className="p-4 rounded-xl border border-[#E7E5E4] bg-white text-xs md:text-sm text-[#1C1917] leading-relaxed whitespace-pre-wrap font-serif">
+            <div className="p-5 rounded-2xl border border-[#E8E5DF] bg-white text-xs md:text-sm text-[#121316] leading-relaxed whitespace-pre-wrap font-serif">
               {activeCitation?.passage}
             </div>
           </div>
         </Drawer>
       </div>
     </AppShell>
+  );
+}
+
+export default function QuizPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-[#6B665E]">Loading Quiz Engine...</div>}>
+      <QuizContent />
+    </React.Suspense>
   );
 }

@@ -25,34 +25,34 @@ export function ProgressBar({
 
   const getVariantColor = () => {
     if (variant === "auto") {
-      if (percentage >= 80) return "bg-[#16A34A]";
-      if (percentage >= 60) return "bg-[#D97706]";
-      return "bg-[#DC2626]";
+      if (percentage >= 80) return "bg-emerald-600";
+      if (percentage >= 60) return "bg-amber-600";
+      return "bg-rose-600";
     }
     switch (variant) {
       case "strong":
-        return "bg-[#16A34A]";
+        return "bg-emerald-600";
       case "medium":
-        return "bg-[#D97706]";
+        return "bg-amber-600";
       case "weak":
-        return "bg-[#DC2626]";
+        return "bg-rose-600";
       case "primary":
       default:
-        return "bg-[#7C3AED]";
+        return "bg-[#121316]";
     }
   };
 
   const heightClass = {
     sm: "h-1.5",
-    md: "h-2.5",
-    lg: "h-4",
+    md: "h-2",
+    lg: "h-3",
   }[size];
 
   return (
     <div className={cn("w-full flex items-center gap-3", className)}>
       <div
         className={cn(
-          "w-full bg-[#E7E5E4] rounded-full overflow-hidden relative",
+          "w-full bg-[#E8E5DF] rounded-full overflow-hidden relative",
           heightClass
         )}
         role="progressbar"
@@ -68,7 +68,7 @@ export function ProgressBar({
         />
       </div>
       {showLabel && (
-        <span className="text-xs font-semibold text-[#1C1917] min-w-9 text-right font-mono">
+        <span className="text-xs font-semibold text-[#121316] min-w-9 text-right font-mono">
           {percentage}%
         </span>
       )}

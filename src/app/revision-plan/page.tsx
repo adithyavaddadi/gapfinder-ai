@@ -14,15 +14,12 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
-  Circle,
   SkipForward,
   RotateCcw,
-  BookOpen,
   ArrowRight,
-  Flame,
-  HelpCircle,
-  Layers,
   Info,
+  Calendar,
+  Layers,
 } from "lucide-react";
 
 interface RevisionTaskItem {
@@ -106,7 +103,6 @@ export default function RevisionPlanPage() {
 
   const handleToggleTaskStatus = async (task: RevisionTaskItem, newStatus: "pending" | "completed" | "skipped") => {
     try {
-      // Optimistic update
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
       );
@@ -134,29 +130,27 @@ export default function RevisionPlanPage() {
     .map(Number)
     .sort((a, b) => a - b);
 
-  // Calculate completion progress
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Helper for task type badges
   const getTaskTypeBadge = (type: "learn" | "practice" | "verify") => {
     if (type === "learn") {
       return (
-        <span className="px-2 py-0.5 rounded bg-[#F3EEFF] text-[#7C3AED] text-[10px] font-bold uppercase tracking-wider">
+        <span className="px-3 py-0.5 rounded-full bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF] text-[10px] font-bold uppercase tracking-wider">
           Learn
         </span>
       );
     }
     if (type === "practice") {
       return (
-        <span className="px-2 py-0.5 rounded bg-[#FFFBEB] text-[#D97706] text-[10px] font-bold uppercase tracking-wider">
+        <span className="px-3 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold uppercase tracking-wider">
           Practice
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded bg-[#F0FDF4] text-[#16A34A] text-[10px] font-bold uppercase tracking-wider">
+      <span className="px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider">
         Verify
       </span>
     );
@@ -168,14 +162,18 @@ export default function RevisionPlanPage() {
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#121316]">
                 Personalized Revision Plan
               </h1>
-              {plan && <Badge variant="ai" label={`Version ${plan.version}`} />}
+              {plan && (
+                <span className="px-3 py-0.5 rounded-full text-[10px] font-bold bg-[#F2EFEB] border border-[#E8E5DF] text-[#121316]">
+                  Version {plan.version}
+                </span>
+              )}
             </div>
-            <p className="text-xs text-[#57534E] mt-1">
-              Prioritized daily schedule: P = 0.40W + 0.25I + 0.20U + 0.15D. Adapts as you diagnose and retest.
+            <p className="text-xs text-[#5A554E] mt-1.5 max-w-2xl leading-relaxed">
+              Algorithmic daily schedule: <code className="text-[#121316] font-mono font-bold bg-[#F2EFEB] px-1.5 py-0.5 rounded text-[11px]">P = 0.40W + 0.25I + 0.20U + 0.15D</code>. Prioritizes foundational weak areas first and recalculates continuously.
             </p>
           </div>
 
@@ -184,6 +182,7 @@ export default function RevisionPlanPage() {
               onClick={handleGeneratePlan}
               isLoading={isGenerating}
               size="sm"
+              className="font-semibold shadow-sm"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
               Recalculate Schedule
@@ -192,45 +191,46 @@ export default function RevisionPlanPage() {
         </div>
 
         {/* Pedagogical Rule Banner */}
-        <div className="p-3.5 rounded-xl bg-[#FAF9F6] border border-[#E7E5E4] flex items-start gap-3 text-xs text-[#57534E]">
-          <Info className="w-4 h-4 text-[#7C3AED] shrink-0 mt-0.5" />
-          <div>
-            <strong className="text-[#1C1917]">Academic Proof Principle: </strong>
-            Marking revision tasks completed helps track your study pace, but does <em>not</em> artificially increase topic mastery. True mastery upgrades only when validated by fresh diagnostic quiz retests.
+        <div className="p-4 rounded-2xl bg-white border border-[#E8E5DF] flex items-start gap-3 text-xs text-[#5A554E] shadow-xs">
+          <Info className="w-4 h-4 text-[#121316] shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <strong className="text-[#121316] font-bold">Academic Proof Principle: </strong>
+            Marking revision tasks completed helps track your study pace, but does <em>not</em> artificially inflate topic mastery. True mastery upgrades only when validated by fresh diagnostic quiz retests.
           </div>
         </div>
 
         {/* Plan Configuration & Progress Banner */}
         {plan && (
-          <Card className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <Card className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
             <div className="space-y-1">
               <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider">
                 Daily Time Budget
               </span>
-              <p className="text-2xl font-extrabold text-[#1C1917]">
+              <p className="text-3xl font-extrabold font-mono text-[#121316]">
                 {plan.daily_hours} Hours <span className="text-xs text-[#78716C] font-normal">/ day</span>
               </p>
-              <span className="text-xs text-[#57534E]">
-                Mode: <strong className="capitalize">{plan.learning_mode}</strong>
+              <span className="text-xs text-[#5A554E] block pt-0.5">
+                Mode: <strong className="capitalize text-[#121316]">{plan.learning_mode}</strong>
               </span>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#57534E] font-medium">Task Completion Pace</span>
-                <span className="font-mono font-bold text-[#1C1917]">
+                <span className="text-[#5A554E] font-medium">Task Completion Pace</span>
+                <span className="font-mono font-bold text-[#121316]">
                   {completedTasks} / {totalTasks} ({progressPct}%)
                 </span>
               </div>
-              <ProgressBar value={progressPct} size="md" />
+              <ProgressBar value={progressPct} size="md" variant="primary" />
             </div>
 
             <div className="flex flex-col sm:items-end justify-center text-xs space-y-1">
               <span className="text-[#78716C]">Target Exam Date:</span>
-              <span className="font-semibold text-[#1C1917]">
+              <span className="font-semibold text-[#121316]">
                 {plan.exam_date ? new Date(plan.exam_date).toLocaleDateString() : "No fixed deadline (Neutral Urgency)"}
               </span>
-              <span className="text-[11px] text-[#7C3AED] font-medium">
+              <span className="text-[11px] text-[#121316] font-semibold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
                 7-Day Adaptive Block Active
               </span>
             </div>
@@ -249,7 +249,7 @@ export default function RevisionPlanPage() {
             {isLoading ? (
               <div className="space-y-4 py-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-32 rounded-xl bg-white border border-[#E7E5E4] animate-pulse" />
+                  <div key={i} className="h-32 rounded-3xl bg-white border border-[#E8E5DF] animate-pulse" />
                 ))}
               </div>
             ) : tasks.length === 0 ? (
@@ -273,24 +273,24 @@ export default function RevisionPlanPage() {
                   return (
                     <div key={dayNum} className="space-y-3">
                       {/* Day Header with Duration Sum */}
-                      <div className="flex items-center justify-between pb-2 border-b border-[#E7E5E4]">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-md bg-[#7C3AED] text-white flex items-center justify-center text-xs font-bold">
+                      <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DF]">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[#121316] text-white flex items-center justify-center text-xs font-bold">
                             D{dayNum}
                           </div>
-                          <h3 className="text-sm font-bold text-[#1C1917]">
+                          <h3 className="text-base font-bold text-[#121316] tracking-tight">
                             Day {dayNum} Revision Tasks
                           </h3>
                         </div>
 
-                        <span className="text-xs text-[#78716C] font-mono flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
+                        <span className="text-xs text-[#5A554E] font-mono flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-[#E8E5DF] shadow-xs">
+                          <Clock className="w-3.5 h-3.5 text-[#121316]" />
                           {dayMinutes} minutes total
                         </span>
                       </div>
 
                       {/* Day Tasks List */}
-                      <div className="grid grid-cols-1 gap-3">
+                      <div className="grid grid-cols-1 gap-3.5">
                         {dayTasks.map((task) => {
                           const isCompleted = task.status === "completed";
                           const isSkipped = task.status === "skipped";
@@ -298,19 +298,19 @@ export default function RevisionPlanPage() {
                           return (
                             <Card
                               key={task.id}
-                              className={`p-4 transition-all border ${
+                              className={`p-5 transition-all duration-200 border ${
                                 isCompleted
-                                  ? "bg-[#FAF9F6] border-[#E7E5E4] opacity-75"
+                                  ? "bg-emerald-50/50 border-emerald-200 opacity-80"
                                   : isSkipped
-                                  ? "bg-[#FAF9F6] border-[#E7E5E4] opacity-50"
-                                  : "bg-white border-[#E7E5E4] hover:shadow-xs"
+                                  ? "bg-[#FAF9F5] border-[#E8E5DF] opacity-50"
+                                  : "bg-white border-[#E8E5DF] hover:border-[#121316]/30 shadow-xs"
                               }`}
                             >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="space-y-2 flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
                                     {getTaskTypeBadge(task.task_type)}
-                                    <span className="text-xs font-semibold text-[#1C1917] truncate">
+                                    <span className="text-sm font-bold text-[#121316] truncate">
                                       {task.title}
                                     </span>
                                     <span className="text-[11px] text-[#78716C] font-mono">
@@ -318,12 +318,12 @@ export default function RevisionPlanPage() {
                                     </span>
                                   </div>
 
-                                  <p className="text-xs text-[#57534E] leading-relaxed">
+                                  <p className="text-xs text-[#4A463F] leading-relaxed">
                                     {task.description}
                                   </p>
 
-                                  <div className="text-[11px] text-[#78716C] bg-[#FAF9F6] p-2 rounded-lg inline-block border border-[#F5F5F4]">
-                                    <strong className="text-[#57534E]">Why this task: </strong>
+                                  <div className="text-[11px] text-[#5A554E] bg-[#FAF9F5] p-3 rounded-2xl inline-block border border-[#E8E5DF]">
+                                    <strong className="text-[#121316]">Why this task: </strong>
                                     {task.why_reason}
                                   </div>
                                 </div>
@@ -332,8 +332,8 @@ export default function RevisionPlanPage() {
                                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                   {task.task_type === "verify" && (
                                     <Link href={`/quiz?topicId=${task.topic_id}`}>
-                                      <Button size="sm" variant="secondary" className="text-xs py-1 px-3">
-                                        Take Verification Quiz
+                                      <Button size="sm" variant="secondary" className="text-xs py-1.5 px-3">
+                                        Verification Quiz
                                         <ArrowRight className="w-3 h-3 ml-1" />
                                       </Button>
                                     </Link>
@@ -347,13 +347,13 @@ export default function RevisionPlanPage() {
                                         isCompleted ? "pending" : "completed"
                                       )
                                     }
-                                    className={`p-2 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                                       isCompleted
-                                        ? "bg-[#F0FDF4] border-[#BBF7D0] text-[#16A34A]"
-                                        : "bg-white border-[#E7E5E4] text-[#57534E] hover:bg-[#FAF9F6]"
+                                        ? "bg-emerald-100 border-emerald-300 text-emerald-900 shadow-xs"
+                                        : "bg-white border-[#E8E5DF] text-[#121316] hover:bg-[#F2EFEB]"
                                     }`}
                                   >
-                                    <CheckCircle2 className="w-4 h-4" />
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                                     <span>{isCompleted ? "Done" : "Complete"}</span>
                                   </button>
 
@@ -365,10 +365,10 @@ export default function RevisionPlanPage() {
                                         isSkipped ? "pending" : "skipped"
                                       )
                                     }
-                                    className={`p-2 rounded-lg border text-xs transition-colors ${
+                                    className={`p-2 rounded-full border text-xs transition-colors cursor-pointer ${
                                       isSkipped
-                                        ? "bg-[#F5F5F4] border-[#E7E5E4] text-[#78716C]"
-                                        : "bg-white border-[#E7E5E4] text-[#A8A29E] hover:text-[#DC2626]"
+                                        ? "bg-[#E8E5DF] border-[#D5D0C6] text-[#5A554E]"
+                                        : "bg-white border-[#E8E5DF] text-[#78716C] hover:text-rose-600 hover:bg-rose-50"
                                     }`}
                                     title="Skip task"
                                   >
@@ -391,29 +391,29 @@ export default function RevisionPlanPage() {
           <TabsContent value="priorities">
             <Card className="p-6 space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-[#1C1917]">
+                <h3 className="text-sm font-bold text-[#121316]">
                   Priority Formula Breakdown: P = 0.40W + 0.25I + 0.20U + 0.15D
                 </h3>
-                <p className="text-xs text-[#57534E] mt-0.5">
+                <p className="text-xs text-[#5A554E] mt-0.5">
                   Tasks are assigned to earlier days based on their composite priority score.
                 </p>
               </div>
 
-              <div className="divide-y divide-[#F5F5F4]">
+              <div className="divide-y divide-[#F2EFEB]">
                 {tasks.map((task, idx) => (
                   <div
                     key={task.id}
-                    className="py-3 flex items-center justify-between text-xs"
+                    className="py-3.5 flex items-center justify-between text-xs"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-mono font-bold text-[#78716C] w-6">
                         #{idx + 1}
                       </span>
                       <div>
-                        <span className="font-semibold text-[#1C1917] block">
+                        <span className="font-bold text-[#121316] block">
                           {task.title}
                         </span>
-                        <span className="text-[11px] text-[#78716C]">
+                        <span className="text-[11px] text-[#5A554E]">
                           Scheduled for Day {task.day_number} • {task.duration_minutes} min
                         </span>
                       </div>
@@ -421,7 +421,7 @@ export default function RevisionPlanPage() {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="font-mono font-bold text-[#7C3AED]">
+                        <span className="font-mono font-bold text-[#121316]">
                           {task.priority_score}
                         </span>
                         <span className="text-[10px] text-[#78716C] block">Priority Score</span>

@@ -23,28 +23,28 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none select-none cursor-pointer";
+      "inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#121316] focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none select-none cursor-pointer";
 
     const variantStyles = {
       primary:
-        "bg-[#7C3AED] text-white hover:bg-[#6D28D9] active:scale-[0.98] shadow-sm shadow-[#7C3AED]/20",
+        "bg-[#121316] text-white hover:bg-black active:scale-[0.98] shadow-sm shadow-[#121316]/10",
       secondary:
-        "bg-[#F3EEFF] text-[#7C3AED] hover:bg-[#E9DEFF] active:scale-[0.98]",
+        "bg-white hover:bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF] active:scale-[0.98] shadow-xs",
       outline:
-        "border border-[#E7E5E4] bg-white text-[#1C1917] hover:bg-[#FAF9F6] active:bg-[#F5F5F4]",
+        "border border-[#E8E5DF] bg-transparent text-[#121316] hover:bg-[#F2EFEB] hover:border-[#D5D0C6] active:bg-[#E8E5DF]",
       ghost:
-        "text-[#57534E] hover:text-[#1C1917] hover:bg-[#F5F5F4] active:bg-[#E7E5E4]",
+        "text-[#5A554E] hover:text-[#121316] hover:bg-[#F2EFEB] active:bg-[#E8E5DF]",
       danger:
-        "bg-[#DC2626] text-white hover:bg-[#B91C1C] active:scale-[0.98] shadow-sm shadow-red-500/20",
+        "bg-rose-600 text-white hover:bg-rose-700 active:scale-[0.98] shadow-xs shadow-rose-600/20",
       subtle:
-        "bg-[#F5F5F4] text-[#1C1917] hover:bg-[#E7E5E4] active:scale-[0.98]",
+        "bg-[#F2EFEB] text-[#121316] hover:bg-[#E8E5DF] active:scale-[0.98]",
     };
 
     const sizeStyles = {
-      sm: "text-xs px-3 py-1.5 gap-1.5",
-      md: "text-sm px-4 py-2 gap-2",
-      lg: "text-base px-6 py-2.5 gap-2.5",
-      icon: "h-9 w-9 p-0",
+      sm: "text-xs px-3.5 py-1.5 gap-1.5",
+      md: "text-xs px-4 py-2 gap-2 font-semibold",
+      lg: "text-sm px-6 py-2.5 gap-2.5 font-semibold",
+      icon: "h-9 w-9 p-0 rounded-full",
     };
 
     return (
@@ -54,7 +54,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(baseStyles, variantStyles[variant], sizeStyles[size], className)}
         {...props}
       >
-        {isLoading && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+        {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
         {children}
       </button>
     );

@@ -46,55 +46,55 @@ export function Badge({
     switch (variant) {
       case "strong":
         return {
-          classes: "bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]",
-          icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A] shrink-0" />,
+          classes: "bg-emerald-50/90 text-emerald-800 border border-emerald-200 shadow-xs",
+          icon: <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />,
           defaultLabel: "Strong",
         };
       case "medium":
         return {
-          classes: "bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]",
-          icon: <AlertTriangle className="w-3 h-3 text-[#D97706] shrink-0" />,
+          classes: "bg-amber-50/90 text-amber-900 border border-amber-200 shadow-xs",
+          icon: <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />,
           defaultLabel: "Medium",
         };
       case "weak":
         return {
-          classes: "bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]",
-          icon: <AlertCircle className="w-3 h-3 text-[#DC2626] shrink-0" />,
+          classes: "bg-rose-50/90 text-rose-800 border border-rose-200 shadow-xs",
+          icon: <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" />,
           defaultLabel: "Weak",
         };
       case "not_assessed":
         return {
-          classes: "bg-[#F5F5F4] text-[#78716C] border border-[#E7E5E4]",
-          icon: <HelpCircle className="w-3 h-3 text-[#78716C] shrink-0" />,
+          classes: "bg-[#F2EFEB] text-[#6B665E] border border-[#E8E5DF]",
+          icon: <HelpCircle className="w-3 h-3 text-[#6B665E] shrink-0" />,
           defaultLabel: "Not Assessed",
         };
       case "insufficient":
         return {
-          classes: "bg-[#F5F5F4] text-[#78716C] border border-[#E7E5E4]",
-          icon: <ShieldAlert className="w-3 h-3 text-[#78716C] shrink-0" />,
+          classes: "bg-rose-50 text-rose-800 border border-rose-200",
+          icon: <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />,
           defaultLabel: "Insufficient Evidence",
         };
       case "preliminary":
         return {
-          classes: "bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]",
-          icon: <Shield className="w-3 h-3 text-[#D97706] shrink-0" />,
+          classes: "bg-amber-50 text-amber-900 border border-amber-200",
+          icon: <Shield className="w-3 h-3 text-amber-600 shrink-0" />,
           defaultLabel: "Preliminary Evidence",
         };
       case "established":
         return {
-          classes: "bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]",
-          icon: <ShieldCheck className="w-3 h-3 text-[#16A34A] shrink-0" />,
+          classes: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+          icon: <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />,
           defaultLabel: "Established Evidence",
         };
       case "ai":
         return {
-          classes: "bg-[#F3EEFF] text-[#7C3AED] border border-[#DDD6FE]",
-          icon: <Sparkles className="w-3 h-3 text-[#7C3AED] shrink-0" />,
+          classes: "bg-white text-[#121316] border border-[#E8E5DF] shadow-xs",
+          icon: <Sparkles className="w-3 h-3 text-[#121316] shrink-0" />,
           defaultLabel: "AI Grounded",
         };
       case "syllabus":
         return {
-          classes: "bg-[#F5F5F4] text-[#44403C] border border-[#E7E5E4]",
+          classes: "bg-[#F2EFEB] text-[#4A463F] border border-[#E8E5DF]",
           icon: null,
           defaultLabel: "Syllabus",
         };
@@ -102,7 +102,7 @@ export function Badge({
       case "default":
       default:
         return {
-          classes: "bg-[#F5F5F4] text-[#57534E] border border-[#E7E5E4]",
+          classes: "bg-[#F2EFEB] text-[#4A463F] border border-[#E8E5DF]",
           icon: null,
           defaultLabel: "",
         };
@@ -115,7 +115,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium tracking-tight whitespace-nowrap",
+        "inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap",
         config.classes,
         className
       )}

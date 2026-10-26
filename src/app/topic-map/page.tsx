@@ -104,8 +104,8 @@ export default function TopicMapPage() {
       if (res.ok) {
         await fetchTopics();
       }
-    } catch (err) {
-      console.error("Topic extraction error:", err);
+    } catch (e) {
+      console.error("Generate topics error:", e);
     } finally {
       setIsGenerating(false);
     }
@@ -120,11 +120,12 @@ export default function TopicMapPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newTitle,
-          description: newDesc,
-          parent_id: newParentId,
+          title: newTitle.trim(),
+          description: newDesc.trim() || null,
+          parentId: newParentId,
         }),
       });
+
       if (res.ok) {
         setAddModalOpen(false);
         setNewTitle("");
@@ -133,35 +134,39 @@ export default function TopicMapPage() {
         await fetchTopics();
       }
     } catch (e) {
-      console.error("Failed to add topic:", e);
+      console.error("Create topic error:", e);
     }
   };
 
   const handleUpdateTitle = async (topicId: string) => {
-    if (!editingTitle.trim()) {
-      setEditingTopicId(null);
-      return;
-    }
+    if (!editingTitle.trim()) return;
     try {
-      await fetch(`/api/topics/${topicId}`, {
+      const res = await fetch(`/api/topics/${topicId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: editingTitle }),
+        body: JSON.stringify({ title: editingTitle.trim() }),
       });
-      setEditingTopicId(null);
-      await fetchTopics();
+      if (res.ok) {
+        setEditingTopicId(null);
+        await fetchTopics();
+      }
     } catch (e) {
-      console.error("Failed to update topic:", e);
+      console.error("Update topic error:", e);
     }
   };
 
   const handleDeleteTopic = async (topicId: string) => {
+    if (!confirm("Are you sure you want to remove this topic from your curriculum?")) return;
     try {
-      await fetch(`/api/topics/${topicId}`, { method: "DELETE" });
-      if (selectedTopicId === topicId) setSelectedTopicId(null);
-      await fetchTopics();
+      const res = await fetch(`/api/topics/${topicId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (selectedTopicId === topicId) setSelectedTopicId(null);
+        await fetchTopics();
+      }
     } catch (e) {
-      console.error("Delete failed:", e);
+      console.error("Delete topic error:", e);
     }
   };
 
@@ -170,48 +175,57 @@ export default function TopicMapPage() {
     setCollapsedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Build tree structure
-  const rootTopics = topics.filter((t) => !t.parent_id);
-  const childMap = new Map<string, TopicItem[]>();
-  topics.forEach((t) => {
-    if (t.parent_id) {
-      const list = childMap.get(t.parent_id) || [];
-      list.push(t);
-      childMap.set(t.parent_id, list);
-    }
-  });
-
-  const selectedTopic = topics.find((t) => t.id === selectedTopicId);
-
-  const getStatusColorDot = (level: string) => {
-    if (level === "strong") return "bg-[#16A34A]";
-    if (level === "medium") return "bg-[#D97706]";
-    if (level === "weak") return "bg-[#DC2626]";
-    return "bg-[#78716C]";
-  };
-
+  // Filter topics
   const filteredTopics = topics.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus =
-      statusFilter === "all" || t.mastery?.level === statusFilter;
+      statusFilter === "all" || (t.mastery?.level || "not_assessed") === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  // Group into root and child topics
+  const rootTopics = filteredTopics.filter((t) => !t.parent_id);
+  const childMap = new Map<string, TopicItem[]>();
+  filteredTopics.forEach((t) => {
+    if (t.parent_id) {
+      const arr = childMap.get(t.parent_id) || [];
+      arr.push(t);
+      childMap.set(t.parent_id, arr);
+    }
+  });
+
+  const selectedTopic = topics.find((t) => t.id === selectedTopicId) || rootTopics[0];
+
+  const getStatusColorDot = (level?: string) => {
+    switch (level) {
+      case "strong":
+        return "bg-emerald-500 shadow-xs";
+      case "medium":
+        return "bg-amber-500 shadow-xs";
+      case "weak":
+        return "bg-rose-500 shadow-xs";
+      default:
+        return "bg-[#D5D1C8]";
+    }
+  };
+
   return (
     <AppShell>
-      <div className="space-y-6">
-        {/* Top Header */}
+      <div className="space-y-8">
+        {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">
-                Knowledge X-Ray & Topic Map
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#121316]">
+                Curriculum Topic Map & Dependencies
               </h1>
-              <Badge variant="ai" label="Interactive Hierarchy" />
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF]">
+                Interactive Hierarchy
+              </span>
             </div>
-            <p className="text-xs text-[#57534E] mt-1">
+            <p className="text-xs text-[#5A554E] mt-1 max-w-2xl leading-relaxed">
               Structured diagnostic view of your curriculum, suspected dependencies, and evidence-backed mastery ratings.
             </p>
           </div>
@@ -224,7 +238,7 @@ export default function TopicMapPage() {
               isLoading={isGenerating}
               className="text-xs"
             >
-              <Sparkles className="w-3.5 h-3.5 mr-1 text-[#7C3AED]" />
+              <Sparkles className="w-3.5 h-3.5 mr-1" />
               Extract from Materials
             </Button>
             <Button
@@ -244,31 +258,31 @@ export default function TopicMapPage() {
         {/* Knowledge X-Ray Two-Pane Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
           {/* Left Pane: Collapsible Topic Tree & Filters (7 cols) */}
-          <Card className="lg:col-span-7 p-5 flex flex-col justify-between">
+          <Card className="lg:col-span-7 p-6 flex flex-col justify-between">
             <div>
               {/* Search & Filter Bar */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="flex flex-col sm:flex-row gap-3 mb-5">
                 <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#78716C]" />
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#736E66]" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search curriculum topics..."
-                    className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-[#E7E5E4] bg-[#FAF9F6] text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                    className="w-full pl-9 pr-3 py-2 rounded-full border border-[#E8E5DF] bg-white text-xs text-[#121316] placeholder:text-[#A09A90] focus:outline-none focus:ring-2 focus:ring-[#121316]"
                   />
                 </div>
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                   {["all", "weak", "medium", "strong", "not_assessed"].map((status) => (
                     <button
                       key={status}
                       type="button"
                       onClick={() => setStatusFilter(status)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize whitespace-nowrap transition-colors ${
+                      className={`px-3 py-1 rounded-full text-[11px] font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
                         statusFilter === status
-                          ? "bg-[#7C3AED] text-white shadow-xs"
-                          : "bg-[#F5F5F4] text-[#57534E] hover:bg-[#E7E5E4]"
+                          ? "bg-[#121316] text-white shadow-xs"
+                          : "bg-[#F2EFEB] text-[#5A554E] hover:text-[#121316] hover:bg-[#E8E5DF]"
                       }`}
                     >
                       {status.replace("_", " ")}
@@ -281,7 +295,7 @@ export default function TopicMapPage() {
               {isLoading ? (
                 <div className="space-y-3 py-6">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-12 rounded-xl bg-[#F5F5F4] animate-pulse" />
+                    <div key={i} className="h-12 rounded-2xl bg-white border border-[#E8E5DF] animate-pulse" />
                   ))}
                 </div>
               ) : rootTopics.length === 0 ? (
@@ -304,14 +318,14 @@ export default function TopicMapPage() {
                     const isSelected = selectedTopicId === root.id;
 
                     return (
-                      <div key={root.id} className="space-y-1">
+                      <div key={root.id} className="space-y-1.5">
                         {/* Parent Node */}
                         <div
                           onClick={() => setSelectedTopicId(root.id)}
-                          className={`group p-3 rounded-xl border transition-all duration-150 flex items-center justify-between cursor-pointer ${
+                          className={`group p-3.5 rounded-2xl border transition-all duration-150 flex items-center justify-between cursor-pointer ${
                             isSelected
-                              ? "bg-[#F3EEFF] border-[#DDD6FE] shadow-xs"
-                              : "bg-white border-[#E7E5E4] hover:bg-[#FAF9F6]"
+                              ? "bg-[#121316] text-white border-[#121316] shadow-sm"
+                              : "bg-white border-[#E8E5DF] hover:border-[#121316] hover:bg-[#FBF9F5] text-[#121316]"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -319,7 +333,7 @@ export default function TopicMapPage() {
                               <button
                                 type="button"
                                 onClick={(e) => toggleCollapse(root.id, e)}
-                                className="p-0.5 text-[#78716C] hover:text-[#1C1917]"
+                                className={`p-0.5 cursor-pointer ${isSelected ? "text-white/70 hover:text-white" : "text-[#736E66] hover:text-[#121316]"}`}
                               >
                                 {isCollapsed ? (
                                   <ChevronRight className="w-4 h-4" />
@@ -336,38 +350,38 @@ export default function TopicMapPage() {
 
                             {editingTopicId === root.id ? (
                               <div
-                                className="flex items-center gap-1 flex-1"
+                                className="flex items-center gap-1.5 flex-1"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <input
                                   type="text"
                                   value={editingTitle}
                                   onChange={(e) => setEditingTitle(e.target.value)}
-                                  className="px-2 py-0.5 rounded border border-[#7C3AED] text-xs font-semibold"
+                                  className="px-2.5 py-1 rounded-lg border border-[#121316] bg-white text-[#121316] text-xs font-semibold"
                                   autoFocus
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateTitle(root.id)}
-                                  className="text-[#16A34A] p-1"
+                                  className="text-emerald-600 p-1 hover:text-emerald-700 cursor-pointer"
                                 >
-                                  <Check className="w-3.5 h-3.5" />
+                                  <Check className="w-4 h-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingTopicId(null)}
-                                  className="text-[#DC2626] p-1"
+                                  className="text-rose-600 p-1 hover:text-rose-700 cursor-pointer"
                                 >
-                                  <X className="w-3.5 h-3.5" />
+                                  <X className="w-4 h-4" />
                                 </button>
                               </div>
                             ) : (
                               <div className="min-w-0 flex-1">
-                                <span className="text-xs font-semibold text-[#1C1917] truncate block">
+                                <span className={`text-xs font-bold truncate block ${isSelected ? "text-white" : "text-[#121316]"}`}>
                                   {root.title}
                                 </span>
                                 {root.description && (
-                                  <span className="text-[11px] text-[#78716C] truncate block">
+                                  <span className={`text-[11px] truncate block ${isSelected ? "text-white/70" : "text-[#736E66]"}`}>
                                     {root.description}
                                   </span>
                                 )}
@@ -378,9 +392,8 @@ export default function TopicMapPage() {
                           <div className="flex items-center gap-2 shrink-0 ml-3">
                             <Badge
                               variant={root.mastery?.level || "not_assessed"}
-                              className="text-[10px] py-0 px-2"
+                              className="text-[10px] py-0 px-2.5"
                             />
-                            {/* Action icons on hover */}
                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                               <button
                                 type="button"
@@ -389,7 +402,7 @@ export default function TopicMapPage() {
                                   setEditingTopicId(root.id);
                                   setEditingTitle(root.title);
                                 }}
-                                className="p-1 text-[#78716C] hover:text-[#1C1917]"
+                                className={`p-1 cursor-pointer ${isSelected ? "text-white/70 hover:text-white" : "text-[#736E66] hover:text-[#121316]"}`}
                               >
                                 <Edit2 className="w-3 h-3" />
                               </button>
@@ -400,7 +413,7 @@ export default function TopicMapPage() {
                                   setNewParentId(root.id);
                                   setAddModalOpen(true);
                                 }}
-                                className="p-1 text-[#78716C] hover:text-[#7C3AED]"
+                                className={`p-1 cursor-pointer ${isSelected ? "text-white/70 hover:text-white" : "text-[#736E66] hover:text-[#121316]"}`}
                                 title="Add subtopic"
                               >
                                 <Plus className="w-3.5 h-3.5" />
@@ -411,7 +424,7 @@ export default function TopicMapPage() {
                                   e.stopPropagation();
                                   handleDeleteTopic(root.id);
                                 }}
-                                className="p-1 text-[#78716C] hover:text-[#DC2626]"
+                                className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -421,17 +434,17 @@ export default function TopicMapPage() {
 
                         {/* Child Subtopics */}
                         {!isCollapsed && children.length > 0 && (
-                          <div className="pl-6 border-l-2 border-[#E7E5E4] ml-4 space-y-1 my-1">
+                          <div className="pl-6 border-l border-[#E8E5DF] ml-4 space-y-1.5 my-1.5">
                             {children.map((child) => {
                               const isChildSelected = selectedTopicId === child.id;
                               return (
                                 <div
                                   key={child.id}
                                   onClick={() => setSelectedTopicId(child.id)}
-                                  className={`p-2.5 rounded-lg border transition-all duration-150 flex items-center justify-between cursor-pointer ${
+                                  className={`p-3 rounded-2xl border transition-all duration-150 flex items-center justify-between cursor-pointer ${
                                     isChildSelected
-                                      ? "bg-[#F3EEFF] border-[#DDD6FE]"
-                                      : "bg-white/80 border-[#E7E5E4] hover:bg-[#FAF9F6]"
+                                      ? "bg-[#121316] text-white border-[#121316]"
+                                      : "bg-white border-[#E8E5DF] hover:border-[#121316] text-[#121316]"
                                   }`}
                                 >
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -440,7 +453,7 @@ export default function TopicMapPage() {
                                         child.mastery?.level
                                       )}`}
                                     />
-                                    <span className="text-xs font-medium text-[#1C1917] truncate">
+                                    <span className="text-xs font-semibold truncate">
                                       {child.title}
                                     </span>
                                   </div>
@@ -463,12 +476,12 @@ export default function TopicMapPage() {
               )}
             </div>
 
-            <div className="pt-4 border-t border-[#F5F5F4] flex items-center justify-between text-[11px] text-[#78716C]">
+            <div className="pt-4 border-t border-[#E8E5DF] flex items-center justify-between text-[11px] text-[#736E66]">
               <span>{topics.length} total curriculum topics mapped</span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#16A34A]" /> Strong
-                <span className="w-2 h-2 rounded-full bg-[#D97706] ml-2" /> Medium
-                <span className="w-2 h-2 rounded-full bg-[#DC2626] ml-2" /> Weak
+              <span className="flex items-center gap-1 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" /> Strong
+                <span className="w-2 h-2 rounded-full bg-amber-500 ml-2" /> Medium
+                <span className="w-2 h-2 rounded-full bg-rose-500 ml-2" /> Weak
               </span>
             </div>
           </Card>
@@ -480,13 +493,13 @@ export default function TopicMapPage() {
                 {/* Header & Score Ring */}
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider block mb-1">
+                    <span className="text-[10px] uppercase font-bold text-[#736E66] tracking-wider block mb-1">
                       {selectedTopic.parent_id ? "Subtopic Details" : "Curriculum Module"}
                     </span>
-                    <h3 className="text-lg font-bold text-[#1C1917] leading-snug">
+                    <h3 className="text-lg font-extrabold text-[#121316] leading-snug">
                       {selectedTopic.title}
                     </h3>
-                    <p className="text-xs text-[#57534E] mt-1.5 leading-relaxed">
+                    <p className="text-xs text-[#5A554E] mt-1.5 leading-relaxed">
                       {selectedTopic.description || "No specific syllabus description specified."}
                     </p>
                   </div>
@@ -500,18 +513,18 @@ export default function TopicMapPage() {
                 </div>
 
                 {/* Evidence & Status Badges */}
-                <div className="p-3.5 rounded-xl bg-[#FAF9F6] border border-[#E7E5E4] space-y-2">
+                <div className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E8E5DF] space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#57534E] font-medium">Diagnostic Status:</span>
+                    <span className="text-[#5A554E] font-medium">Diagnostic Status:</span>
                     <Badge variant={selectedTopic.mastery?.level || "not_assessed"} />
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#57534E] font-medium">Evidence Rigor:</span>
+                    <span className="text-[#5A554E] font-medium">Evidence Rigor:</span>
                     <Badge variant={selectedTopic.mastery?.evidence_badge || "insufficient"} />
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#57534E] font-medium">Questions Attempted:</span>
-                    <span className="font-mono font-semibold text-[#1C1917]">
+                    <span className="text-[#5A554E] font-medium">Questions Attempted:</span>
+                    <span className="font-mono font-bold text-[#121316]">
                       {selectedTopic.mastery?.questions_correct || 0} /{" "}
                       {selectedTopic.mastery?.questions_attempted || 0}
                     </span>
@@ -520,10 +533,10 @@ export default function TopicMapPage() {
 
                 {/* Diagnostic Reason / Why this rating */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#121316] mb-1.5">
                     Why this rating:
                   </h4>
-                  <div className="p-3 rounded-xl border border-[#E7E5E4] bg-white text-xs text-[#1C1917] leading-relaxed">
+                  <div className="p-3.5 rounded-2xl border border-[#E8E5DF] bg-[#FBF9F5] text-xs text-[#5A554E] leading-relaxed">
                     {selectedTopic.mastery?.why_rating ||
                       "Topic has not been evaluated in diagnostic quizzes yet. Take a quiz to assess mastery."}
                   </div>
@@ -532,18 +545,18 @@ export default function TopicMapPage() {
                 {/* Suspected Prerequisites */}
                 {selectedTopic.prerequisites && selectedTopic.prerequisites.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#78716C] mb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-2">
                       Suspected Prerequisites:
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedTopic.prerequisites.map((p) => (
                         <span
                           key={p.id}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-dashed border-[#D97706] bg-[#FFFBEB] text-[#D97706] text-xs font-medium"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-dashed border-amber-300 bg-amber-50 text-amber-900 text-xs font-medium"
                         >
-                          <GitFork className="w-3 h-3" />
+                          <GitFork className="w-3 h-3 text-amber-600" />
                           <span>{p.prerequisiteTitle}</span>
-                          <span className="text-[10px] text-[#B45309] font-mono">({p.status})</span>
+                          <span className="text-[10px] text-amber-700 font-mono">({p.status})</span>
                         </span>
                       ))}
                     </div>
@@ -554,14 +567,14 @@ export default function TopicMapPage() {
                 {selectedTopic.mastery?.missed_concepts &&
                   selectedTopic.mastery.missed_concepts.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#DC2626] mb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800 mb-2">
                         Missed Concepts Identified:
                       </h4>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedTopic.mastery.missed_concepts.map((concept, idx) => (
                           <span
                             key={idx}
-                            className="px-2.5 py-1 rounded-md bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626] text-xs font-medium"
+                            className="px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium"
                           >
                             {concept}
                           </span>
@@ -571,14 +584,14 @@ export default function TopicMapPage() {
                   )}
               </div>
             ) : (
-              <div className="text-center py-16 text-xs text-[#78716C]">
+              <div className="text-center py-16 text-xs text-[#736E66]">
                 Select a topic on the left to inspect its Knowledge X-Ray details.
               </div>
             )}
 
             {/* Action Buttons */}
             {selectedTopic && (
-              <div className="pt-6 border-t border-[#F5F5F4] flex items-center gap-3">
+              <div className="pt-6 border-t border-[#E8E5DF] flex items-center gap-3">
                 <Link
                   href={`/quiz?topicId=${selectedTopic.id}`}
                   className="flex-1"
@@ -589,11 +602,11 @@ export default function TopicMapPage() {
                   </Button>
                 </Link>
                 <Link
-                  href={`/explain?topicId=${selectedTopic.id}`}
+                  href={`/explain?topic=${encodeURIComponent(selectedTopic.title)}`}
                   className="flex-1"
                 >
                   <Button variant="outline" size="md" className="w-full text-xs">
-                    <BookOpen className="w-3.5 h-3.5 mr-1.5 text-[#7C3AED]" />
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                     Explain Topic
                   </Button>
                 </Link>
@@ -612,7 +625,7 @@ export default function TopicMapPage() {
       >
         <form onSubmit={handleSaveTopic} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1C1917] mb-1">
+            <label className="block text-xs font-bold text-[#121316] mb-1">
               Topic Title
             </label>
             <input
@@ -620,13 +633,13 @@ export default function TopicMapPage() {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="e.g. BCNF Decomposition and Lossless Joins"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#E7E5E4] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full px-4 py-2.5 rounded-full border border-[#E8E5DF] bg-white text-xs text-[#121316] placeholder:text-[#A09A90] focus:outline-none focus:ring-2 focus:ring-[#121316]"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1C1917] mb-1">
+            <label className="block text-xs font-bold text-[#121316] mb-1">
               Description (Optional)
             </label>
             <textarea
@@ -634,7 +647,7 @@ export default function TopicMapPage() {
               onChange={(e) => setNewDesc(e.target.value)}
               rows={3}
               placeholder="Brief summary of concepts covered in this topic..."
-              className="w-full px-3.5 py-2 rounded-xl border border-[#E7E5E4] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full px-4 py-2.5 rounded-2xl border border-[#E8E5DF] bg-white text-xs text-[#121316] placeholder:text-[#A09A90] focus:outline-none focus:ring-2 focus:ring-[#121316]"
             />
           </div>
 

@@ -1,0 +1,13 @@
+Entity-Relationship Model. An ER diagram models entities, their attributes and the relationships between them. Cardinality (1:1, 1:N, M:N) states how many instances of one entity relate to another. A weak entity has no key of its own and depends on an owner entity.
+
+Relational Model and Keys. A relation is a table of tuples. A superkey uniquely identifies a tuple; a candidate key is a minimal superkey; the primary key is the candidate key chosen by the designer. A foreign key references the primary key of another relation and enforces referential integrity.
+
+Normalization. 1NF requires atomic attribute values. 2NF removes partial dependencies on part of a composite key. 3NF removes transitive dependencies between non-key attributes. BCNF requires every determinant of a functional dependency to be a superkey.
+
+SQL Queries and Joins. INNER JOIN returns only matching rows from both tables. LEFT JOIN returns all rows from the left table and NULLs where the right has no match. GROUP BY aggregates rows, and HAVING filters groups after aggregation, whereas WHERE filters rows before it.
+
+Transactions and ACID. Atomicity means a transaction is all-or-nothing. Consistency moves the database between valid states. Isolation hides concurrent transactions from each other. Durability guarantees committed changes survive crashes, typically through a write-ahead log.
+
+Indexing and B+ Trees. A B+ tree keeps all records in linked leaf nodes, so range queries scan leaves sequentially. Internal nodes only store keys for routing. A clustered index fixes the physical row order; a table can have only one.
+
+Concurrency Control and Locking. Two-phase locking has a growing phase where locks are acquired and a shrinking phase where they are released, which guarantees conflict serializability. Deadlocks occur when transactions wait on each other in a cycle and are resolved by aborting a victim.

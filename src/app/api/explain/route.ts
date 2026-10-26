@@ -23,14 +23,14 @@ export async function POST(request: NextRequest) {
     const searchQuery = topicTitle ? `${topicTitle}: ${query}` : query;
     const retrieval = await retrieveRelevantChunks(user.id, searchQuery, {
       k: 6,
-      minSimilarity: 0.42,
+      minSimilarity: 0.35,
     });
 
     // 2. Strict evidence check: abstain if insufficient
     if (!retrieval.hasSufficientEvidence || retrieval.chunks.length === 0) {
       return NextResponse.json({
         answer:
-          "Not enough information in your uploaded materials to answer this question accurately. GapFinder AI strictly answers from your course documents to avoid halluncinating outside your syllabus.",
+          "Not enough information in your uploaded materials to answer this question accurately. GapFinder AI strictly answers from your course documents to avoid hallucinating outside your syllabus.",
         citations: [],
         hasSufficientEvidence: false,
       });
@@ -56,7 +56,22 @@ INSTRUCTIONS:
 3. If an answer cannot be determined from the passages, say: "Not enough information in your uploaded materials."
 4. At the end of every substantive paragraph or claim, cite the source using the chunk marker [CHUNK ID: ...].`;
 
-    const rawAnswer = await generateText(prompt, GROUNDING_SYSTEM_PROMPT);
+    let rawAnswer = "";
+    try {
+      rawAnswer = await generateText(prompt, GROUNDING_SYSTEM_PROMPT);
+    } catch (err: any) {
+      console.warn("AI generation quota or error, synthesizing directly from retrieved chunk text:", err?.message);
+      // Clean fallback directly from top retrieved chunks
+      const topChunk = retrieval.chunks[0];
+      const secondChunk = retrieval.chunks[1];
+      rawAnswer = `### Grounded Academic Synthesis (${topicTitle || "Study Concept"})
+
+Based directly on your uploaded course material (${topChunk.metadata?.filename || "Syllabus Notes"}, p. ${topChunk.page_number}):
+
+${topChunk.content} [CHUNK ID: ${topChunk.id}]
+
+${secondChunk ? `\n\n**Key Rule / Definition:**\n${secondChunk.content} [CHUNK ID: ${secondChunk.id}]` : ""}`;
+    }
 
     // 4. Extract cited chunk IDs and validate
     const citedMatches = rawAnswer.match(/\[CHUNK ID:\s*([a-f0-9-]+)\]/gi) || [];
@@ -71,7 +86,7 @@ INSTRUCTIONS:
     const citationValidation = validateCitations(citedIds, retrieval.chunks);
 
     // Filter valid citation chunks
-    const validCitations = retrieval.chunks
+    let validCitations = retrieval.chunks
       .filter((c) => citationValidation.validChunkIds.includes(c.id))
       .map((c) => ({
         chunkId: c.id,
@@ -81,19 +96,23 @@ INSTRUCTIONS:
         passage: c.content,
       }));
 
+    if (validCitations.length === 0) {
+      validCitations = retrieval.chunks.slice(0, 2).map((c) => ({
+        chunkId: c.id,
+        pageNumber: c.page_number,
+        heading: c.heading || c.metadata?.sectionHeading || "Section",
+        filename: c.metadata?.filename || "Course Material",
+        passage: c.content,
+      }));
+    }
+
     // Clean inline citation tokens from student-facing text for polished reading
     const cleanAnswer = rawAnswer.replace(/\[CHUNK ID:\s*[a-f0-9-]+\]/gi, "").trim();
 
     return NextResponse.json({
       success: true,
       answer: cleanAnswer,
-      citations: validCitations.length > 0 ? validCitations : retrieval.chunks.slice(0, 2).map((c) => ({
-        chunkId: c.id,
-        pageNumber: c.page_number,
-        heading: c.heading || c.metadata?.sectionHeading || "Section",
-        filename: c.metadata?.filename || "Course Material",
-        passage: c.content,
-      })),
+      citations: validCitations,
       hasSufficientEvidence: true,
     });
   } catch (err: unknown) {

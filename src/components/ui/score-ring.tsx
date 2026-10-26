@@ -25,9 +25,9 @@ export function ScoreRing({
   const offset = circumference - (percentage / 100) * circumference;
 
   const getColor = (val: number) => {
-    if (val >= 80) return "#16A34A"; // Strong green
-    if (val >= 60) return "#D97706"; // Medium amber
-    return "#DC2626"; // Weak red
+    if (val >= 80) return "#15803D"; // Emerald
+    if (val >= 60) return "#B45309"; // Amber
+    return "#DC2626"; // Rose
   };
 
   const strokeColor = getColor(percentage);
@@ -43,7 +43,7 @@ export function ScoreRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E7E5E4"
+          stroke="#E8E5DF"
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -64,11 +64,11 @@ export function ScoreRing({
       </svg>
       {/* Center Score */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-xl font-bold text-[#1C1917] tracking-tight font-mono">
+        <span className="text-xl font-bold text-[#121316] tracking-tight font-mono">
           {percentage}%
         </span>
         {label && (
-          <span className="text-[10px] uppercase font-semibold text-[#57534E] tracking-wider">
+          <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider">
             {label}
           </span>
         )}

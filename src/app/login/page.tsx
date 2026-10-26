@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Sparkles, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={<div className="p-8 animate-pulse text-xs text-[#78716C]">Loading...</div>}>
+    <React.Suspense fallback={<div className="p-8 text-center text-xs text-[#736E66]">Loading...</div>}>
       <LoginContent />
     </React.Suspense>
   );
@@ -58,161 +58,156 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#FAF9F6]">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#F9F8F5] text-[#121316] selection:bg-[#121316] selection:text-white">
       {/* Left Column: Login Form */}
       <div className="flex flex-col justify-between p-8 sm:p-12 md:p-16">
         <div>
-          <Link href="/" className="inline-flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-xl bg-[#7C3AED] flex items-center justify-center text-white font-bold text-sm shadow-xs">
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
+            <div className="w-9 h-9 rounded-full bg-[#121316] text-white flex items-center justify-center font-bold text-base shadow-xs">
               G
             </div>
-            <span className="font-bold text-base text-[#1C1917]">GapFinder AI</span>
+            <span className="font-extrabold text-base text-[#121316] tracking-tight">GapFinder AI</span>
           </Link>
 
           <div className="max-w-md mx-auto">
-            <h1 className="text-2xl font-bold text-[#1C1917] tracking-tight mb-2">
+            <h1 className="text-2xl font-extrabold text-[#121316] tracking-tight mb-2">
               Welcome back
             </h1>
-            <p className="text-xs text-[#57534E] mb-8">
+            <p className="text-xs text-[#5A554E] mb-8">
               Sign in to resume your revision plan and diagnostic tracking.
             </p>
 
             {/* Try Demo Callout */}
-            <div className="p-3.5 rounded-xl bg-[#F3EEFF] border border-[#DDD6FE] mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-[#7C3AED] shrink-0" />
+            <div className="p-4 rounded-2xl bg-[#F2EFEB] border border-[#E8E5DF] mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-[#121316] shrink-0" />
                 <div className="text-xs">
-                  <span className="font-semibold text-[#1C1917] block">
+                  <span className="font-bold text-[#121316] block">
                     Hackathon Evaluator / Judge?
                   </span>
-                  <span className="text-[#57534E]">Try the preloaded DBMS workspace instantly</span>
+                  <span className="text-[#5A554E]">Try the preloaded DBMS workspace instantly</span>
                 </div>
               </div>
               <Link href="/demo">
-                <Button size="sm" variant="primary" className="text-xs shrink-0 py-1 px-3">
+                <Button size="sm" className="text-xs shrink-0 py-1.5 px-3.5 font-semibold">
                   Try Demo
                 </Button>
               </Link>
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs text-[#DC2626] mb-4">
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 mb-4">
                 {errorMessage}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1C1917] mb-1.5">
+                <label className="block text-xs font-bold text-[#121316] mb-1.5">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@university.edu"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-white text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all"
+                  placeholder="student@example.com"
+                  className="w-full px-4 py-2.5 rounded-full border border-[#E8E5DF] bg-white text-xs text-[#121316] placeholder:text-[#A09A90] focus:outline-none focus:ring-2 focus:ring-[#121316]"
                   required
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-[#1C1917]">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setErrorMessage("Password reset link will be sent if configured.")}
-                    className="text-xs text-[#7C3AED] hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <label className="block text-xs font-bold text-[#121316] mb-1.5">
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-white text-sm text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 rounded-full border border-[#E8E5DF] bg-white text-xs text-[#121316] placeholder:text-[#A09A90] focus:outline-none focus:ring-2 focus:ring-[#121316]"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#78716C] hover:text-[#1C1917]"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#736E66] hover:text-[#121316]"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
+              <div className="flex items-center justify-between text-xs pt-1">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-[#121316] hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               <Button
                 type="submit"
                 isLoading={isLoading}
-                className="w-full text-sm font-semibold mt-2"
+                size="md"
+                className="w-full font-bold shadow-xs mt-2"
               >
-                Sign In
-                <ArrowRight className="w-4 h-4 ml-1" />
+                Sign In to GapFinder
               </Button>
             </form>
 
-            <p className="text-center text-xs text-[#57534E] mt-6">
-              Don't have an account yet?{" "}
-              <Link href="/signup" className="text-[#7C3AED] font-semibold hover:underline">
-                Sign up free
+            <div className="mt-8 text-center text-xs text-[#5A554E]">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="font-bold text-[#121316] hover:underline">
+                Create one now
               </Link>
-            </p>
+            </div>
           </div>
         </div>
 
-        <div className="text-[11px] text-[#A8A29E] text-center pt-8">
-          GapFinder AI • Server-side deterministic scoring & RAG citation verification
+        <div className="text-[11px] text-[#736E66] text-center mt-8">
+          © 2026 GapFinder AI. Strict Academic Provenance Grounding.
         </div>
       </div>
 
-      {/* Right Column: Value-prop Showcase */}
-      <div className="hidden md:flex flex-col justify-between p-12 lg:p-16 bg-white border-l border-[#E7E5E4]">
-        <div />
-        <div className="max-w-md mx-auto space-y-8">
-          <div className="w-12 h-12 rounded-2xl bg-[#F3EEFF] text-[#7C3AED] flex items-center justify-center">
-            <Sparkles className="w-6 h-6" />
+      {/* Right Column: Editorial Visual Showcase */}
+      <div className="hidden md:flex flex-col justify-between p-12 lg:p-16 border-l border-[#E8E5DF] bg-[#F2EFEB]">
+        <div className="space-y-6 max-w-md">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E8E5DF] text-xs font-bold text-[#121316]">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Strict Evidence Guarantee</span>
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-2xl font-bold text-[#1C1917] tracking-tight">
-              Diagnose before you revise.
-            </h2>
-            <p className="text-xs text-[#57534E] leading-relaxed">
-              Studying everything equally guarantees you miss your actual blind spots. GapFinder analyzes your course materials and evaluates your mastery before the exam does.
-            </p>
-          </div>
+          <h2 className="text-3xl font-extrabold text-[#121316] tracking-tight leading-snug">
+            Diagnose blindspots before exam day.
+          </h2>
 
-          <div className="space-y-3.5 pt-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-              <p className="text-xs text-[#57534E]">
-                <strong className="text-[#1C1917]">Evidence-based diagnosis:</strong> Questions and gap ratings are verified against your documents with page citations.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-              <p className="text-xs text-[#57534E]">
-                <strong className="text-[#1C1917]">Personalized daily schedule:</strong> Priority scores balance weakness, syllabus weight, and exam urgency.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-              <p className="text-xs text-[#57534E]">
-                <strong className="text-[#1C1917]">Retest verification:</strong> Prove your mastery has improved with fresh diagnostic questions.
-              </p>
-            </div>
+          <p className="text-xs text-[#5A554E] leading-relaxed">
+            Standard revision assumes you know what you don&apos;t know. GapFinder turns your actual course materials into a personalized diagnostic engine with citation-level audit trails.
+          </p>
+
+          <div className="space-y-3 pt-4">
+            {[
+              "Every question maps directly to a paragraph in your course material",
+              "Adaptive revision plans dynamically order what you should study next",
+              "Deterministic server-side scoring protects against model drift",
+              "Empirical progress metrics show proven learning gain deltas",
+            ].map((feature, idx) => (
+              <div key={idx} className="flex items-start gap-2.5 text-xs text-[#121316]">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span className="font-medium">{feature}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="text-xs text-[#78716C]">
-          <span>Protected by strict Row Level Security & Server-side validation</span>
+        <div className="p-4 rounded-2xl bg-white border border-[#E8E5DF] text-xs text-[#5A554E] max-w-md shadow-xs">
+          <span className="font-bold text-[#121316] block mb-1">
+            Student Proof of Learning
+          </span>
+          "Re-reading chapters creates a false sense of familiarity. Testing yourself with citation feedback forces active recall and exposes real conceptual gaps."
         </div>
       </div>
     </div>

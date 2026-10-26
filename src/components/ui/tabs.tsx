@@ -38,7 +38,7 @@ export function TabsList({
   return (
     <div
       className={cn(
-        "inline-flex p-1 bg-[#F5F5F4] rounded-xl border border-[#E7E5E4] gap-1 self-start",
+        "inline-flex p-1 bg-[#F2EFEB] rounded-full border border-[#E8E5DF] gap-1 self-start",
         className
       )}
     >
@@ -66,10 +66,10 @@ export function TabsTrigger({
       type="button"
       onClick={() => ctx.onValueChange(value)}
       className={cn(
-        "px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 cursor-pointer select-none",
+        "px-4 py-1.5 text-xs font-medium rounded-full transition-all duration-150 cursor-pointer select-none",
         isActive
-          ? "bg-white text-[#1C1917] shadow-xs font-semibold"
-          : "text-[#57534E] hover:text-[#1C1917]",
+          ? "bg-[#121316] text-white shadow-xs font-semibold"
+          : "text-[#5A554E] hover:text-[#121316] hover:bg-white/60",
         className
       )}
     >

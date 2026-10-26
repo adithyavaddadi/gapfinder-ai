@@ -2,28 +2,31 @@
 
 @layer base {
   :root {
-    --background: #FAF9F6;
+    --background: #F9F8F5;
     --card: #FFFFFF;
-    --card-foreground: #1C1917;
-    --border: #E7E5E4;
-    --input: #E7E5E4;
-    --ring: #7C3AED;
+    --card-foreground: #121316;
+    --border: #E8E5DF;
+    --input: #E8E5DF;
+    --ring: #121316;
 
-    --foreground: #1C1917;
-    --muted: #F5F5F4;
-    --muted-foreground: #78716C;
-    --secondary: #57534E;
+    --foreground: #121316;
+    --muted: #F2EFEB;
+    --muted-foreground: #6B665E;
+    --secondary: #4A463F;
 
-    --primary: #7C3AED;
-    --primary-hover: #6D28D9;
-    --primary-tint: #F3EEFF;
+    --primary: #121316;
+    --primary-hover: #26272B;
+    --primary-tint: #F2EFEB;
     --primary-foreground: #FFFFFF;
 
-    --status-strong: #16A34A;
+    --accent-violet: #6366F1;
+    --accent-violet-tint: #EEF2FF;
+
+    --status-strong: #15803D;
     --status-strong-bg: #F0FDF4;
     --status-strong-border: #BBF7D0;
 
-    --status-medium: #D97706;
+    --status-medium: #B45309;
     --status-medium-bg: #FFFBEB;
     --status-medium-border: #FDE68A;
 
@@ -45,10 +48,43 @@
     color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
+    background-image: 
+      radial-gradient(ellipse 90% 60% at 50% -15%, rgba(238, 234, 224, 0.7), transparent 75%),
+      radial-gradient(ellipse 70% 50% at 90% 90%, rgba(228, 235, 248, 0.4), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }
 
-/* Custom scrollbars & utilities */
+/* Liquid Glass & Editorial Aesthetic Utilities */
+.liquid-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(232, 229, 223, 0.95);
+  box-shadow: 0 12px 35px -8px rgba(35, 30, 20, 0.05), 0 2px 6px -1px rgba(35, 30, 20, 0.02);
+  border-radius: 1.5rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-card:hover {
+  border-color: rgba(18, 19, 22, 0.18);
+  box-shadow: 0 20px 45px -10px rgba(35, 30, 20, 0.08), 0 4px 10px -2px rgba(35, 30, 20, 0.03);
+}
+
+.liquid-pill {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(232, 229, 223, 0.9);
+  box-shadow: 0 8px 25px -5px rgba(25, 22, 15, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.liquid-header {
+  font-family: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Custom minimal scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -57,15 +93,15 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D6D3D1;
+  background: #D8D4CC;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #A8A29E;
+  background: #A8A399;
 }
 
 /* Focus styles */
 :focus-visible {
-  outline: 2px solid #7C3AED;
+  outline: 2px solid #121316;
   outline-offset: 2px;
 }

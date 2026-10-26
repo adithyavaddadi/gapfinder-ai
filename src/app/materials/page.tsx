@@ -3,7 +3,7 @@
 import * as React from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -89,7 +89,6 @@ export default function MaterialsPage() {
       }
 
       const docId = uploadData.document.id;
-      // Immediately trigger processing
       fetchDocuments();
 
       const procRes = await fetch(`/api/documents/${docId}/process`, {
@@ -100,49 +99,68 @@ export default function MaterialsPage() {
         setUploadError("Scanned PDF detected: OCR text extraction is not supported. Please upload a digital PDF with searchable text.");
       }
 
-      fetchDocuments();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload or processing failed";
-      setUploadError(msg);
+      await fetchDocuments();
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to process document");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleRetryProcessing = async (id: string) => {
+  const handleDelete = async (docId: string) => {
     try {
-      await fetch(`/api/documents/${id}/process`, { method: "POST" });
-      fetchDocuments();
+      await fetch(`/api/documents/${docId}`, { method: "DELETE" });
+      await fetchDocuments();
     } catch (e) {
-      console.error("Retry failed:", e);
+      console.error("Delete failed:", e);
     }
   };
 
   return (
     <AppShell>
       <div className="space-y-8">
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">
-              Course Materials & Evidence Sources
-            </h1>
-            <p className="text-xs text-[#57534E] mt-1">
-              Upload course syllabi, lecture notes, textbook chapters, and past exam papers. Every diagnostic question citations links back to these files.
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#121316]">
+                Course Study Materials
+              </h1>
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF]">
+                Grounding Knowledge Base
+              </span>
+            </div>
+            <p className="text-xs text-[#5A554E] mt-1 max-w-xl leading-relaxed">
+              Upload your syllabus, textbooks, and notes. GapFinder AI parses passages, creates chunk embeddings, and grounds all diagnostic questions.
             </p>
           </div>
         </div>
 
+        {/* Upload Error Banner */}
         {uploadError && (
-          <div className="p-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] flex items-start gap-3 text-xs text-[#DC2626]">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div className="flex-1 font-medium">{uploadError}</div>
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between text-xs text-rose-800">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="text-rose-600 hover:text-rose-900 font-bold ml-4 cursor-pointer"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
-        {/* Drag and drop upload zone */}
-        <Card className="border-dashed border-2 border-[#E7E5E4] bg-white p-6 md:p-8 text-center transition-all">
+        {/* Upload Dropzone Card */}
+        <Card
+          className={`p-8 sm:p-12 border-2 border-dashed transition-all duration-200 text-center ${
+            dragActive
+              ? "border-[#121316] bg-white shadow-xl"
+              : "border-[#D5D1C8] bg-white/70 hover:border-[#121316]"
+          }`}
+        >
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -156,14 +174,14 @@ export default function MaterialsPage() {
             }}
             className="flex flex-col items-center justify-center max-w-lg mx-auto"
           >
-            <div className="w-12 h-12 rounded-2xl bg-[#F3EEFF] text-[#7C3AED] flex items-center justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-[#F2EFEB] border border-[#E8E5DF] text-[#121316] flex items-center justify-center mb-4 shadow-xs">
               <UploadCloud className="w-6 h-6" />
             </div>
 
-            <h3 className="text-base font-semibold text-[#1C1917] mb-1">
+            <h3 className="text-base font-bold text-[#121316] mb-1 tracking-tight">
               Upload Course Material (PDF or TXT)
             </h3>
-            <p className="text-xs text-[#57534E] mb-5 max-w-md leading-relaxed">
+            <p className="text-xs text-[#5A554E] mb-6 max-w-md leading-relaxed">
               Drag & drop your syllabus, textbook sections, or lecture notes here. Maximum size 10MB. Digital searchable PDFs recommended.
             </p>
 
@@ -174,10 +192,10 @@ export default function MaterialsPage() {
                   key={type}
                   type="button"
                   onClick={() => setSelectedType(type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all capitalize cursor-pointer ${
                     selectedType === type
-                      ? "bg-[#7C3AED] text-white shadow-xs font-semibold"
-                      : "bg-[#F5F5F4] text-[#57534E] hover:bg-[#E7E5E4]"
+                      ? "bg-[#121316] text-white shadow-xs"
+                      : "bg-[#F2EFEB] text-[#5A554E] hover:text-[#121316] hover:bg-[#E8E5DF]"
                   }`}
                 >
                   {type.replace("_", " ")}
@@ -197,6 +215,7 @@ export default function MaterialsPage() {
               onClick={() => fileInputRef.current?.click()}
               isLoading={isUploading}
               size="md"
+              className="font-semibold px-6"
             >
               <UploadCloud className="w-4 h-4 mr-2" />
               Select File to Upload
@@ -207,14 +226,14 @@ export default function MaterialsPage() {
         {/* Uploaded Documents List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#1C1917]">
+            <h2 className="text-base font-bold text-[#121316]">
               Indexed Documents ({documents.length})
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={fetchDocuments}
-              className="text-xs text-[#57534E]"
+              className="text-xs text-[#5A554E] hover:text-[#121316]"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1" />
               Refresh
@@ -224,7 +243,7 @@ export default function MaterialsPage() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-36 rounded-xl bg-white border border-[#E7E5E4] animate-pulse" />
+                <div key={i} className="h-36 rounded-3xl bg-white border border-[#E8E5DF] animate-pulse" />
               ))}
             </div>
           ) : documents.length === 0 ? (
@@ -244,15 +263,15 @@ export default function MaterialsPage() {
                 <Card key={doc.id} className="p-5 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-[#F5F5F4] flex items-center justify-center text-[#57534E] shrink-0">
-                          <FileText className="w-4 h-4" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#F2EFEB] border border-[#E8E5DF] flex items-center justify-center text-[#121316] shrink-0">
+                          <FileText className="w-4 h-4 text-[#121316]" />
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-[#1C1917] truncate">
+                          <h4 className="text-sm font-bold text-[#121316] truncate">
                             {doc.title || doc.filename}
                           </h4>
-                          <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider">
+                          <span className="text-[10px] uppercase font-bold text-[#736E66] tracking-wider">
                             {doc.file_type.replace("_", " ")}
                           </span>
                         </div>
@@ -273,39 +292,37 @@ export default function MaterialsPage() {
                     </div>
 
                     {doc.status === "failed" && doc.error_message && (
-                      <p className="text-xs text-[#DC2626] bg-[#FEF2F2] p-2 rounded-lg mb-3">
+                      <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-2xl border border-rose-200 mb-3">
                         {doc.error_message}
                       </p>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-[#57534E] py-2 border-y border-[#F5F5F4] my-2">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-[#5A554E] py-2 border-y border-[#E8E5DF] my-2">
                       <div className="flex items-center gap-1.5">
-                        <FileCheck2 className="w-3.5 h-3.5 text-[#78716C]" />
+                        <FileCheck2 className="w-3.5 h-3.5 text-[#121316]" />
                         <span>{doc.page_count || 1} pages</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-[#78716C]" />
+                        <Layers className="w-3.5 h-3.5 text-[#121316]" />
                         <span>{doc.chunk_count || 0} chunks</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 text-[11px] text-[#78716C]">
+                  <div className="flex items-center justify-between pt-2 text-[11px] text-[#736E66] font-mono">
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3 h-3 text-[#736E66]" />
                       {formatTimeAgo(doc.created_at)}
                     </span>
 
-                    {doc.status === "failed" && (
-                      <button
-                        type="button"
-                        onClick={() => handleRetryProcessing(doc.id)}
-                        className="text-xs font-semibold text-[#7C3AED] hover:underline flex items-center gap-1"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Retry
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(doc.id)}
+                      className="p-1 text-[#736E66] hover:text-rose-600 transition-colors cursor-pointer"
+                      title="Delete document"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </Card>
               ))}

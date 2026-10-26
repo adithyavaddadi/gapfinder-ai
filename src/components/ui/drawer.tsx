@@ -54,7 +54,7 @@ export function Drawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/25 backdrop-blur-xs transition-opacity"
           />
 
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
@@ -64,27 +64,27 @@ export function Drawer({
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               className={cn(
-                "w-screen bg-white shadow-2xl flex flex-col border-l border-[#E7E5E4]",
+                "w-screen bg-[#FBF9F5] shadow-2xl flex flex-col border-l border-[#E8E5DF] text-[#121316] backdrop-blur-2xl",
                 widthClasses,
                 className
               )}
             >
               {/* Header */}
-              <div className="p-5 border-b border-[#F5F5F4] flex items-center justify-between">
+              <div className="p-6 border-b border-[#E8E5DF] flex items-center justify-between">
                 <div>
                   {title && (
-                    <h3 className="text-base font-semibold text-[#1C1917] tracking-tight">
+                    <h3 className="text-base font-bold text-[#121316] tracking-tight">
                       {title}
                     </h3>
                   )}
                   {subtitle && (
-                    <p className="text-xs text-[#57534E] mt-0.5">{subtitle}</p>
+                    <p className="text-xs text-[#5A554E] mt-0.5">{subtitle}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F5F4] transition-colors"
+                  className="p-1.5 rounded-full text-[#78716C] hover:text-[#121316] hover:bg-[#F2EFEB] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>

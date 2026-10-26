@@ -22,6 +22,9 @@ import {
   UploadCloud,
   Network,
   HelpCircle,
+  Zap,
+  Target,
+  Flame,
 } from "lucide-react";
 import { formatTimeAgo } from "@/lib/utils";
 
@@ -71,22 +74,18 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      // 1. Fetch topics
       const topicsRes = await fetch("/api/topics");
       const topicsData = topicsRes.ok ? await topicsRes.json() : { topics: [] };
       const topics: any[] = topicsData.topics || [];
 
-      // 2. Fetch revision plan
       const planRes = await fetch("/api/revision-plans");
       const planData = planRes.ok ? await planRes.json() : { tasks: [] };
       const tasks: any[] = planData.tasks || [];
 
-      // 3. Fetch progress
       const progressRes = await fetch("/api/progress");
       const progressData = progressRes.ok ? await progressRes.json() : { attempts: [] };
       const attempts: any[] = progressData.attempts || [];
 
-      // Calculate real stats
       const assessedTopics = topics.filter(
         (t) => t.mastery?.level && t.mastery.level !== "not_assessed"
       );
@@ -96,56 +95,32 @@ export default function DashboardPage() {
 
       const weakest = sortedByWeakness.length > 0 ? sortedByWeakness[0] : null;
 
-      // Filter Day 1 tasks as today's tasks
       const todayTasks = tasks.filter((t) => t.day_number === 1);
       const todayMinutes = todayTasks.reduce((acc, t) => acc + (t.duration_minutes || 0), 0);
 
-      // Determine "Next Best Step"
-      let nextStep: DashboardData["nextBestStep"] = null;
-
-      if (topics.length === 0) {
-        nextStep = {
-          topicId: "",
-          topicTitle: "Upload Your Syllabus",
-          whyThis: "GapFinder needs your actual course material to build your topic map.",
-          whyNow: "Before revising, we must map what you are expected to know.",
-          whatNext: "Upload your syllabus or lecture notes in PDF or TXT format.",
-          actionHref: "/materials",
-          actionLabel: "Upload First Material",
-        };
-      } else if (assessedTopics.length === 0) {
+      let nextStep = null;
+      if (assessedTopics.length === 0 && topics.length > 0) {
         nextStep = {
           topicId: topics[0].id,
-          topicTitle: `Run Diagnostic: ${topics[0].title}`,
-          whyThis: "You have unassessed topics in your mapped curriculum.",
-          whyNow: "A student cannot ask about a gap they don't know they have.",
-          whatNext: "Take a 3-question grounded diagnostic quiz.",
+          topicTitle: topics[0].title,
+          whyThis: "Initial diagnostic baseline required to pinpoint knowledge blindspots.",
+          whyNow: "Without a diagnostic baseline, revision time is wasted on already known concepts.",
+          whatNext: "Complete a 3-question grounded diagnostic quiz.",
           actionHref: `/quiz?topicId=${topics[0].id}`,
           actionLabel: "Start Diagnostic Quiz",
         };
-      } else if (weakest && weakest.mastery?.level === "weak") {
+      } else if (weakest) {
         nextStep = {
           topicId: weakest.id,
-          topicTitle: `Target Weakest Topic: ${weakest.title}`,
-          whyThis: `Diagnosed at ${weakest.mastery.score_percentage}% accuracy. Unresolved foundational gap.`,
-          whyNow: "Revision ROI is highest when eliminating bottom-quartile weaknesses.",
-          whatNext: "Review grounded explanations and take a targeted prerequisite check.",
-          actionHref: `/gap-report`,
-          actionLabel: "View Gap Report & Next Action",
-        };
-      } else {
-        nextStep = {
-          topicId: "",
-          topicTitle: "Review Revision Schedule",
-          whyThis: "Your assessed curriculum topics are organized into an adaptive schedule.",
-          whyNow: "Consistent daily time-budget revision prevents memory decay.",
-          whatNext: "Complete today's practice and verification tasks.",
-          actionHref: "/revision-plan",
-          actionLabel: "Open Revision Plan",
+          topicTitle: weakest.title,
+          whyThis: `Diagnosed at ${weakest.mastery?.score_percentage || 0}% mastery — your lowest validated score.`,
+          whyNow: "Prerequisite for advanced normal forms; fixing this creates maximum composite score gain.",
+          whatNext: "Review grounded textbook notes and retake verification quiz.",
+          actionHref: `/explain?topic=${encodeURIComponent(weakest.title)}`,
+          actionLabel: "Review Concept with AI",
         };
       }
 
-      // Build activity timeline
       const recentActivity: any[] = [];
       attempts.slice(0, 5).forEach((att: any) => {
         recentActivity.push({
@@ -205,67 +180,81 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">
-              Diagnostic Study Dashboard
-            </h1>
-            <p className="text-xs text-[#57534E] mt-1">
-              Live snapshot of your diagnosed syllabus gaps, next recommended steps, and today's revision tasks.
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#121316]">
+                Diagnostic Study Dashboard
+              </h1>
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#F2EFEB] text-[#121316] border border-[#E8E5DF]">
+                Live Engine
+              </span>
+            </div>
+            <p className="text-xs text-[#5A554E] mt-1.5 max-w-2xl leading-relaxed">
+              Real-time snapshot of your diagnosed syllabus gaps, evidence-backed next steps, and algorithmic daily revision blocks.
             </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link href="/quiz">
+              <Button size="sm" className="font-semibold shadow-sm">
+                <HelpCircle className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
+                Run Diagnostic
+              </Button>
+            </Link>
           </div>
         </div>
 
         {/* GUIDED EMPTY STATE FOR NEW USERS */}
         {!isLoading && data?.stats.totalTopics === 0 && (
-          <Card className="p-8 border-[#DDD6FE] bg-white">
+          <Card className="p-8">
             <div className="max-w-xl mx-auto text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#F3EEFF] text-[#7C3AED] flex items-center justify-center mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-[#F2EFEB] text-[#121316] flex items-center justify-center mx-auto shadow-xs">
                 <UploadCloud className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-[#1C1917]">
+              <h2 className="text-xl font-bold text-[#121316] tracking-tight">
                 Welcome to GapFinder AI
               </h2>
-              <p className="text-xs text-[#57534E] leading-relaxed">
+              <p className="text-xs text-[#5A554E] leading-relaxed">
                 Follow this simple 3-step checklist to diagnose your knowledge gaps:
               </p>
 
-              <div className="text-left space-y-3 pt-4 border-t border-[#F5F5F4]">
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-[#E7E5E4] bg-[#FAF9F6]">
-                  <span className="w-6 h-6 rounded-md bg-[#7C3AED] text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="text-left space-y-3 pt-4 border-t border-[#E8E5DF]">
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-[#E8E5DF] bg-[#FAF9F5]">
+                  <span className="w-6 h-6 rounded-full bg-[#121316] text-white flex items-center justify-center text-xs font-bold shrink-0">
                     1
                   </span>
                   <div>
-                    <h4 className="text-xs font-semibold text-[#1C1917]">
+                    <h4 className="text-xs font-bold text-[#121316]">
                       Upload Course Syllabus / Notes
                     </h4>
-                    <p className="text-[11px] text-[#57534E]">
+                    <p className="text-[11px] text-[#5A554E] mt-0.5">
                       Upload PDF or TXT course materials. The system indexes your topics and chunks passages for grounding.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-[#E7E5E4] bg-white">
-                  <span className="w-6 h-6 rounded-md bg-[#F5F5F4] text-[#57534E] flex items-center justify-center text-xs font-bold shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-[#E8E5DF] bg-white">
+                  <span className="w-6 h-6 rounded-full bg-[#E8E5DF] text-[#121316] flex items-center justify-center text-xs font-bold shrink-0">
                     2
                   </span>
                   <div>
-                    <h4 className="text-xs font-semibold text-[#1C1917]">
+                    <h4 className="text-xs font-bold text-[#121316]">
                       Review Knowledge X-Ray
                     </h4>
-                    <p className="text-[11px] text-[#57534E]">
+                    <p className="text-[11px] text-[#5A554E] mt-0.5">
                       Inspect your curriculum tree and suspected prerequisite relationships.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-[#E7E5E4] bg-white">
-                  <span className="w-6 h-6 rounded-md bg-[#F5F5F4] text-[#57534E] flex items-center justify-center text-xs font-bold shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-[#E8E5DF] bg-white">
+                  <span className="w-6 h-6 rounded-full bg-[#E8E5DF] text-[#121316] flex items-center justify-center text-xs font-bold shrink-0">
                     3
                   </span>
                   <div>
-                    <h4 className="text-xs font-semibold text-[#1C1917]">
+                    <h4 className="text-xs font-bold text-[#121316]">
                       Take Grounded Diagnostic & Get Revision Plan
                     </h4>
-                    <p className="text-[11px] text-[#57534E]">
+                    <p className="text-[11px] text-[#5A554E] mt-0.5">
                       Answer verified MCQs. We diagnose Weak/Medium/Strong topics and schedule your daily study time.
                     </p>
                   </div>
@@ -274,7 +263,7 @@ export default function DashboardPage() {
 
               <div className="pt-4">
                 <Link href="/materials">
-                  <Button size="lg" className="shadow-sm shadow-[#7C3AED]/25">
+                  <Button size="lg" className="shadow-sm">
                     <UploadCloud className="w-4 h-4 mr-2" />
                     Upload Your First Document
                   </Button>
@@ -284,78 +273,87 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* 1. LARGE VIOLET-TINTED "YOUR NEXT BEST STEP" CARD */}
+        {/* 1. LIQUID "YOUR NEXT BEST STEP" HERO CARD */}
         {data?.nextBestStep && (
-          <Card className="p-6 md:p-8 border-[#DDD6FE] bg-[#F3EEFF]/40 shadow-sm relative overflow-hidden">
+          <div className="rounded-3xl p-8 bg-white border border-[#E8E5DF] shadow-[0_12px_35px_-8px_rgba(35,30,20,0.06)] relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-3 flex-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-[#DDD6FE] text-[#7C3AED] text-xs font-bold">
+              <div className="space-y-4 flex-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F2EFEB] text-[#121316] text-xs font-bold border border-[#E8E5DF]">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Your Next Best Step</span>
                 </div>
 
-                <h2 className="text-xl md:text-2xl font-bold text-[#1C1917] tracking-tight">
+                <h2 className="text-xl md:text-2xl font-extrabold text-[#121316] tracking-tight">
                   {data.nextBestStep.topicTitle}
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-                  <div className="p-3 rounded-xl bg-white/80 border border-[#E7E5E4]">
-                    <span className="text-[#7C3AED] font-bold block mb-0.5">Why this?</span>
-                    <span className="text-[#57534E]">{data.nextBestStep.whyThis}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs pt-1">
+                  <div className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E8E5DF]">
+                    <span className="text-[#121316] font-bold block mb-1 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-[#121316]" />
+                      Why this?
+                    </span>
+                    <span className="text-[#5A554E] leading-relaxed">{data.nextBestStep.whyThis}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/80 border border-[#E7E5E4]">
-                    <span className="text-[#7C3AED] font-bold block mb-0.5">Why now?</span>
-                    <span className="text-[#57534E]">{data.nextBestStep.whyNow}</span>
+                  <div className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E8E5DF]">
+                    <span className="text-[#121316] font-bold block mb-1 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#121316]" />
+                      Why now?
+                    </span>
+                    <span className="text-[#5A554E] leading-relaxed">{data.nextBestStep.whyNow}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/80 border border-[#E7E5E4]">
-                    <span className="text-[#7C3AED] font-bold block mb-0.5">What next?</span>
-                    <span className="text-[#57534E]">{data.nextBestStep.whatNext}</span>
+                  <div className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E8E5DF]">
+                    <span className="text-[#121316] font-bold block mb-1 flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-[#121316]" />
+                      What next?
+                    </span>
+                    <span className="text-[#5A554E] leading-relaxed">{data.nextBestStep.whatNext}</span>
                   </div>
                 </div>
               </div>
 
               <div className="shrink-0">
                 <Link href={data.nextBestStep.actionHref}>
-                  <Button size="lg" className="w-full sm:w-auto shadow-sm shadow-[#7C3AED]/25">
-                    {data.nextBestStep.actionLabel}
-                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  <Button size="lg" className="w-full sm:w-auto font-semibold px-6 shadow-sm">
+                    <span>{data.nextBestStep.actionLabel}</span>
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
-        {/* 2. STAT CARDS (REAL DATA ONLY) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="p-5 space-y-1">
+        {/* 2. STAT CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <Card className="p-6 space-y-1.5">
             <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider block">
               Curriculum Assessed
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-[#1C1917]">
+              <span className="text-3xl font-extrabold font-mono text-[#121316]">
                 {data?.stats.topicsAssessed || 0}
               </span>
               <span className="text-xs text-[#78716C]">
                 of {data?.stats.totalTopics || 0} topics
               </span>
             </div>
-            <p className="text-[11px] text-[#57534E]">
+            <p className="text-[11px] text-[#5A554E]">
               Evaluated via grounded diagnostic quizzes
             </p>
           </Card>
 
-          <Card className="p-5 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider block">
+          <Card className="p-6 space-y-1.5 border-rose-200 bg-rose-50/40">
+            <span className="text-[10px] uppercase font-bold text-rose-800 tracking-wider block">
               Primary Knowledge Gap
             </span>
             <div className="min-w-0">
               {data?.stats.weakestTopic ? (
                 <>
-                  <span className="text-lg font-bold text-[#DC2626] truncate block">
+                  <span className="text-base font-bold text-rose-900 truncate block">
                     {data.stats.weakestTopic.title}
                   </span>
-                  <span className="text-xs text-[#DC2626] font-semibold">
+                  <span className="text-xs text-rose-700 font-semibold font-mono">
                     {data.stats.weakestTopic.score}% accuracy
                   </span>
                 </>
@@ -365,22 +363,22 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-[#57534E]">
-              Priority recommendation for revision
+            <p className="text-[11px] text-rose-700">
+              Highest-priority topic for today's revision
             </p>
           </Card>
 
-          <Card className="p-5 space-y-1">
+          <Card className="p-6 space-y-1.5 border-[#E8E5DF] bg-[#FAF9F5]">
             <span className="text-[10px] uppercase font-bold text-[#78716C] tracking-wider block">
               Today's Scheduled Revision
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-[#1C1917]">
+              <span className="text-3xl font-extrabold font-mono text-[#121316]">
                 {data?.stats.todayMinutes || 0}
               </span>
               <span className="text-xs text-[#78716C]">minutes total</span>
             </div>
-            <p className="text-[11px] text-[#57534E]">
+            <p className="text-[11px] text-[#5A554E]">
               {data?.stats.todayTasksCount || 0} tasks planned for today
             </p>
           </Card>
@@ -391,11 +389,13 @@ export default function DashboardPage() {
           {/* Weakest Topics List */}
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#1C1917]">
+              <h3 className="text-sm font-bold text-[#121316] flex items-center gap-2">
+                <Flame className="w-4 h-4 text-rose-600" />
                 Diagnosed Knowledge Gaps (Priority Order)
               </h3>
-              <Link href="/gap-report" className="text-xs text-[#7C3AED] hover:underline font-semibold">
-                Full Gap Report →
+              <Link href="/gap-report" className="text-xs text-[#121316] hover:underline font-semibold flex items-center gap-1">
+                <span>Full Gap Report</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -404,15 +404,15 @@ export default function DashboardPage() {
                 {data.weakestTopics.map((topic) => (
                   <div
                     key={topic.id}
-                    className="p-3 rounded-xl border border-[#E7E5E4] bg-white space-y-2"
+                    className="p-4 rounded-2xl border border-[#E8E5DF] bg-white space-y-2 hover:border-[#121316]/30 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[#1C1917] truncate flex-1 pr-2">
+                      <span className="text-xs font-semibold text-[#121316] truncate flex-1 pr-2">
                         {topic.title}
                       </span>
                       <Badge variant={topic.level} />
                     </div>
-                    <ProgressBar value={topic.score} size="sm" />
+                    <ProgressBar value={topic.score} size="sm" variant={topic.level === "weak" ? "weak" : topic.level === "medium" ? "medium" : "strong"} />
                   </div>
                 ))}
               </div>
@@ -426,11 +426,13 @@ export default function DashboardPage() {
           {/* Today's Tasks Checklist */}
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#1C1917]">
+              <h3 className="text-sm font-bold text-[#121316] flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-[#121316]" />
                 Today's Revision Schedule
               </h3>
-              <Link href="/revision-plan" className="text-xs text-[#7C3AED] hover:underline font-semibold">
-                Open Schedule →
+              <Link href="/revision-plan" className="text-xs text-[#121316] hover:underline font-semibold flex items-center gap-1">
+                <span>Open Schedule</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -439,14 +441,14 @@ export default function DashboardPage() {
                 {data.todayTasks.map((t) => (
                   <div
                     key={t.id}
-                    className="p-3 rounded-xl border border-[#E7E5E4] bg-white flex items-center justify-between"
+                    className="p-3.5 rounded-2xl border border-[#E8E5DF] bg-[#FAF9F5] flex items-center justify-between hover:border-[#121316]/30 transition-colors"
                   >
                     <div className="space-y-0.5 min-w-0 pr-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7C3AED]">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#121316] bg-white px-2 py-0.5 rounded-full border border-[#E8E5DF]">
                           {t.type}
                         </span>
-                        <span className="text-xs font-semibold text-[#1C1917] truncate">
+                        <span className="text-xs font-bold text-[#121316] truncate">
                           {t.title}
                         </span>
                       </div>
@@ -456,7 +458,7 @@ export default function DashboardPage() {
                     </div>
 
                     <Link href={`/quiz?topicId=${t.topicId}`}>
-                      <Button size="sm" variant="secondary" className="text-xs py-1 px-2.5">
+                      <Button size="sm" variant="secondary" className="text-xs py-1.5 px-3">
                         Start
                       </Button>
                     </Link>
@@ -474,15 +476,15 @@ export default function DashboardPage() {
         {/* 4. RECENT ACTIVITY TIMELINE */}
         {data?.recentActivity && data.recentActivity.length > 0 && (
           <Card className="p-6 space-y-4">
-            <h3 className="text-sm font-bold text-[#1C1917]">
+            <h3 className="text-sm font-bold text-[#121316]">
               Recent Activity Timeline
             </h3>
-            <div className="divide-y divide-[#F5F5F4] text-xs">
+            <div className="divide-y divide-[#F2EFEB] text-xs">
               {data.recentActivity.map((act) => (
-                <div key={act.id} className="py-2.5 flex items-center justify-between">
+                <div key={act.id} className="py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-                    <span className="font-semibold text-[#1C1917]">{act.title}</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="font-semibold text-[#121316]">{act.title}</span>
                   </div>
                   <span className="text-[#78716C] font-mono">{act.time}</span>
                 </div>

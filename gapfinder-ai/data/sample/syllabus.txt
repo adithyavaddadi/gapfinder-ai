@@ -1,0 +1,9 @@
+DBMS Syllabus
+
+Unit 1: Entity-Relationship Model
+Unit 2: Relational Model and Keys
+Unit 3: Normalization (1NF to BCNF)
+Unit 4: SQL Queries and Joins
+Unit 5: Transactions and ACID
+Unit 6: Indexing and B+ Trees
+Unit 7: Concurrency Control and Locking

@@ -1,18 +1,18 @@
 # GapFinder AI - Master Build Checklist
 
-## Project Status: Completed & Verified
+## Project Status: Completed & Verified (Production Build Passing)
 **Target Deadline**: Today 3 PM Hackathon Submission
-**Stack**: Next.js App Router (TypeScript strict), Tailwind CSS (Light Theme only, Violet #7C3AED accent, No Blue, No Dark Mode), Supabase (Postgres + pgvector 768 + Auth + Storage), Gemini API (server-side only), Zod, Vitest.
+**Stack**: Next.js 16 App Router (TypeScript strict, Turbopack), Tailwind CSS (Dark Glassmorphism Theme, glowing violet #8B5CF6 / cyan #06B6D4 accents, top-middle navigation pill bar, frosted glass cards), Supabase (Postgres + pgvector 768 + Auth + Storage), Gemini API (server-side only with deterministic provenance fallbacks), Zod, Vitest.
 
 ---
 
 ### Step 1: Foundation & Auth & Design System
 - [x] Initialize Next.js project with TypeScript, Tailwind CSS, ESLint
-- [x] Configure light design system in `globals.css` (Background `#FAF9F6`, Cards `#FFFFFF`, Border `#E7E5E4`, Text `#1C1917`, Accent Violet `#7C3AED`, Status Green `#16A34A` / Amber `#D97706` / Red `#DC2626` / Stone `#A8A29E`)
+- [x] Configure dark glassmorphism design system in `globals.css` (Background `#07090E`, Glass Cards `#0D121F`, Glowing Accents `#8B5CF6` / `#06B6D4`, Top-Middle Floating Pill Navigation)
 - [x] Install dependencies: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `lucide-react`, `framer-motion`, `recharts`, `clsx`, `tailwind-merge`, `@google/genai`, `pdf-parse`, `vitest`
 - [x] Create Supabase migration script `supabase/migrations/001_initial_schema.sql` (profiles, documents, document_chunks with pgvector 768, topics, topic_prerequisites, questions, quizzes, quiz_attempts, quiz_responses, topic_mastery, mastery_history, revision_plans, revision_tasks, audit_events, RLS policies, match_chunks SQL function)
 - [x] Build shared component library: Button, Card, Badge, Modal, Drawer, Tabs, Skeleton, Toast, EmptyState, ProgressBar, ScoreRing
-- [x] Build App Shell (Sidebar navigation, topbar with breadcrumbs & Next Best Action, Demo banner)
+- [x] Build App Shell with **Top-Middle Floating Pill Navigation Bar** (No cramped sidebar, responsive desktop/mobile layout)
 - [x] Build Landing Page (Hero, How It Works, Features, Gap Diagnosis vs Chat comparison, CTA)
 - [x] Build Auth pages (Sign In, Sign Up, Instant Demo entry route)
 - [x] Build Supabase auth middleware & server-side auth verification helpers

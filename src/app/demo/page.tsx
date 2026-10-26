@@ -17,7 +17,6 @@ export default function DemoPage() {
     setErrorMsg(null);
 
     try {
-      // First attempt to call the demo login API route
       const res = await fetch("/api/demo/login", { method: "POST" });
       const data = await res.json();
 
@@ -30,7 +29,6 @@ export default function DemoPage() {
       router.refresh();
     } catch (err: unknown) {
       console.warn("API demo login failed, fallback to direct client demo sign-in:", err);
-      // Fallback: try direct Supabase sign in with default credentials if configured
       try {
         const supabase = createClient();
         const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "demo@gapfinder.ai";
@@ -52,7 +50,6 @@ export default function DemoPage() {
         router.push("/dashboard");
         router.refresh();
       } catch {
-        // Allow proceeding to dashboard even if remote auth is unavailable
         router.push("/dashboard?demo=true");
       }
     }
@@ -63,34 +60,34 @@ export default function DemoPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-6">
-      <Card className="max-w-md w-full p-8 text-center shadow-lg border border-[#E7E5E4]">
-        <div className="w-12 h-12 rounded-2xl bg-[#F3EEFF] text-[#7C3AED] flex items-center justify-center mx-auto mb-4">
-          <Sparkles className="w-6 h-6" />
+    <div className="min-h-screen bg-[#F9F8F5] text-[#121316] flex items-center justify-center p-6 selection:bg-[#121316] selection:text-white">
+      <Card className="max-w-md w-full p-8 text-center shadow-lg border border-[#E8E5DF] bg-white">
+        <div className="w-14 h-14 rounded-full bg-[#F2EFEB] border border-[#E8E5DF] text-[#121316] flex items-center justify-center mx-auto mb-4 shadow-xs">
+          <Sparkles className="w-6 h-6 text-[#121316]" />
         </div>
 
-        <h1 className="text-xl font-bold text-[#1C1917] tracking-tight mb-2">
+        <h1 className="text-xl font-extrabold text-[#121316] tracking-tight mb-2">
           Loading Demo Workspace
         </h1>
-        <p className="text-xs text-[#57534E] mb-6 leading-relaxed">
+        <p className="text-xs text-[#5A554E] mb-6 leading-relaxed">
           Preloading realistic Computer Science course: Database Management Systems (Normalization, Dependencies, Joins, ACID) with real grounded diagnostics.
         </p>
 
         {status === "logging_in" && (
-          <div className="flex items-center justify-center gap-2 text-xs text-[#7C3AED] font-semibold py-4">
-            <Loader2 className="w-4 h-4 animate-spin" />
+          <div className="flex items-center justify-center gap-2 text-xs text-[#121316] font-semibold py-4">
+            <Loader2 className="w-4 h-4 animate-spin text-[#121316]" />
             <span>Signing into demo evaluator profile...</span>
           </div>
         )}
 
         {status === "error" && (
           <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-xs text-[#D97706] text-left">
+            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-left">
               {errorMsg}
             </div>
             <Button
               onClick={() => router.push("/dashboard?demo=true")}
-              className="w-full text-xs"
+              className="w-full text-xs font-semibold py-2.5"
             >
               Enter Demo Dashboard Directly
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
