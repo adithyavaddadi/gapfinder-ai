@@ -177,9 +177,23 @@ async function api(op: string, body?: any, form?: FormData) {
 }
 
 // Styled Glass Card
-function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function GlassCard({
+  children,
+  className = "",
+  onClick,
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+  [key: string]: any;
+}) {
   return (
-    <div className={`glass-panel rounded-2xl p-6 shadow-sm border border-lav-200/70 transition-all ${className}`}>
+    <div
+      onClick={onClick}
+      {...props}
+      className={`glass-panel rounded-2xl p-6 shadow-sm border border-lav-200/70 transition-all ${className}`}
+    >
       {children}
     </div>
   );
@@ -413,6 +427,9 @@ function App({ onSignOut }: { onSignOut: () => void }) {
   const [currentSubjectId, setCurrentSubjectId] = useState("dbms");
   const [newSubjectName, setNewSubjectName] = useState("");
   const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+  const [showManageSubjectsModal, setShowManageSubjectsModal] = useState(false);
+  const [uploadTargetMode, setUploadTargetMode] = useState<"current" | "new">("current");
+  const [uploadNewSubjectName, setUploadNewSubjectName] = useState("");
 
   // Document Inspection Modal State
   const [inspectedDoc, setInspectedDoc] = useState<any | null>(null);
@@ -784,21 +801,29 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   ))}
                 </select>
                 <button
+                  type="button"
                   onClick={() => setShowAddSubjectModal(true)}
-                  className="p-1.5 rounded-xl border border-lav-200 bg-white hover:bg-lav-100 text-lav-700 text-xs font-bold"
+                  className="p-1.5 rounded-xl border border-lav-200 bg-white hover:bg-lav-100 text-lav-700 text-xs font-bold cursor-pointer"
                   title="Add new subject"
                 >
                   +
                 </button>
-                {state?.subjects?.length > 1 && (
-                  <button
-                    onClick={() => handleDeleteSubject(currentSubjectId)}
-                    className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold"
-                    title="Delete current subject"
-                  >
-                    🗑️
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowManageSubjectsModal(true)}
+                  className="p-1.5 rounded-xl border border-lav-200 bg-white hover:bg-lav-100 text-lav-700 text-xs font-bold cursor-pointer"
+                  title="Manage all subjects"
+                >
+                  🗂️
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSubject(currentSubjectId)}
+                  className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold cursor-pointer"
+                  title="Delete current subject"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           )}
@@ -946,16 +971,22 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               >
                 +
               </button>
-              {state?.subjects?.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSubject(currentSubjectId)}
-                  className="w-6 h-6 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-[11px] font-bold text-rose-600 flex items-center justify-center shadow-xs cursor-pointer"
-                  title="Delete current subject"
-                >
-                  ✕
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowManageSubjectsModal(true)}
+                className="w-6 h-6 rounded-lg bg-white border border-lav-200 hover:bg-lav-100 text-xs font-bold text-lav-700 flex items-center justify-center shadow-xs cursor-pointer"
+                title="Manage all subjects"
+              >
+                🗂️
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteSubject(currentSubjectId)}
+                className="w-6 h-6 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-[11px] font-bold text-rose-600 flex items-center justify-center shadow-xs cursor-pointer"
+                title="Delete current subject"
+              >
+                🗑️
+              </button>
             </div>
 
             {isMock && (
@@ -1089,21 +1120,85 @@ function App({ onSignOut }: { onSignOut: () => void }) {
 
                   {/* Clean File Upload Box with Custom File Button */}
                   <form
-                    onSubmit={e => {
+                    onSubmit={async e => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget);
-                      fd.append("subjectId", currentSubjectId);
-                      runAction("Indexing and vectorizing uploaded file", async () => {
+                      const isNewSub = uploadTargetMode === "new" || (uploadNewSubjectName.trim().length > 0);
+                      if (isNewSub) {
+                        fd.append("createNewSubject", "true");
+                        fd.append("newSubjectName", uploadNewSubjectName.trim() || selectedFileName.replace(/\.[^/.]+$/, ""));
+                      } else {
+                        fd.append("subjectId", currentSubjectId);
+                      }
+
+                      setBusy(isNewSub ? `Creating new subject workspace & vectorizing...` : "Indexing and vectorizing uploaded file...");
+                      setError("");
+                      try {
                         const res = await api("upload", null, fd);
                         setSelectedFileName("");
+                        setUploadNewSubjectName("");
+                        setUploadTargetMode("current");
                         if (fileInputRef.current) fileInputRef.current.value = "";
-                        setSuccessMsg(`File uploaded! Extracted ${res.extractedTopicsCount || "new"} syllabus topics.`);
-                        // Auto-open course brief so students immediately know what is inside!
-                        await handleOpenBrief(res.docId);
-                      });
+                        const nextId = res.currentSubjectId || currentSubjectId;
+                        setCurrentSubjectId(nextId);
+                        const freshData = await api("state", { subjectId: nextId });
+                        setState(freshData);
+                        setSuccessMsg(`Uploaded! ${isNewSub ? `Created & activated "${res.currentSubjectName || nextId}".` : `Added to ${state?.currentSubjectName}.`} Extracted ${res.extractedTopicsCount || 0} syllabus topics.`);
+                        if (res.docId) {
+                          await handleOpenBrief(res.docId);
+                        }
+                      } catch (err: any) {
+                        setError(err.message);
+                      } finally {
+                        setBusy("");
+                      }
                     }}
                     className="p-5 rounded-2xl border-2 border-dashed border-lav-300 bg-lav-50/50 hover:bg-lav-50 transition-colors"
                   >
+                    {/* Destination Subject Selector */}
+                    <div className="mb-4 p-3 bg-white rounded-xl border border-lav-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-bold text-ink">Upload Target:</span>
+                        <div className="flex items-center bg-lav-100 p-0.5 rounded-lg text-xs font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => setUploadTargetMode("current")}
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                              uploadTargetMode === "current"
+                                ? "bg-white text-lav-900 shadow-xs font-bold"
+                                : "text-ink/60 hover:text-ink"
+                            }`}
+                          >
+                            Active Subject ({state?.currentSubjectName || "Current"})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUploadTargetMode("new")}
+                            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                              uploadTargetMode === "new"
+                                ? "bg-lav-700 text-chart shadow-xs font-bold"
+                                : "text-ink/60 hover:text-ink"
+                            }`}
+                          >
+                            ✨ Create as New Subject
+                          </button>
+                        </div>
+                      </div>
+
+                      {uploadTargetMode === "new" && (
+                        <div className="flex items-center gap-2 flex-1 sm:max-w-xs animate-fade-in">
+                          <input
+                            type="text"
+                            placeholder="New Subject Name (e.g. Operating Systems)"
+                            value={uploadNewSubjectName}
+                            onChange={e => setUploadNewSubjectName(e.target.value)}
+                            required={uploadTargetMode === "new"}
+                            className="w-full px-3 py-1.5 text-xs font-bold border border-lav-300 rounded-lg bg-lav-50/50 focus:bg-white outline-none focus:border-lav-600"
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                       <div className="flex items-center gap-3.5">
                         <div className="w-11 h-11 rounded-2xl bg-lav-700 text-chart flex items-center justify-center shrink-0 shadow-sm">
@@ -1111,7 +1206,11 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                         </div>
                         <div>
                           <h4 className="font-bold text-sm text-ink">Upload Notes or Syllabus</h4>
-                          <p className="text-xs text-ink/60">Upload files for {state?.currentSubjectName}. Topics and questions adapt automatically.</p>
+                          <p className="text-xs text-ink/60">
+                            {uploadTargetMode === "new"
+                              ? "Will create a brand new subject with curriculum topics & tests automatically."
+                              : `Uploading into ${state?.currentSubjectName}. Topics and questions adapt automatically.`}
+                          </p>
                         </div>
                       </div>
 
@@ -1136,7 +1235,18 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                           required
                           onChange={e => {
                             const f = e.target.files?.[0];
-                            setSelectedFileName(f ? f.name : "");
+                            if (f) {
+                              setSelectedFileName(f.name);
+                              const clean = f.name
+                                .replace(/\.[^/.]+$/, "")
+                                .replace(/[_-]/g, " ")
+                                .replace(/\s+(notes|syllabus|paper|text|doc)$/i, "");
+                              if (!uploadNewSubjectName) {
+                                setUploadNewSubjectName(clean);
+                              }
+                            } else {
+                              setSelectedFileName("");
+                            }
                           }}
                           className="hidden"
                           id="file-upload-input"
@@ -1156,7 +1266,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                         </label>
 
                         <ActionBtn type="submit" variant="primary" className="text-xs h-10">
-                          Upload & Vectorize
+                          {uploadTargetMode === "new" ? "Create Subject & Upload" : "Upload & Vectorize"}
                         </ActionBtn>
                       </div>
                     </div>
@@ -2513,6 +2623,100 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   Create Subject
                 </ActionBtn>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2B: Manage All Subjects Modal */}
+      {showManageSubjectsModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-lav-200 animate-fade-in flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-lav-100 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink font-display">Workspace Subjects</h3>
+                <p className="text-xs text-ink/60">Switch active course, create new subject workspaces, or delete old ones.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManageSubjectsModal(false)}
+                className="w-8 h-8 rounded-full bg-lav-100 hover:bg-lav-200 text-lav-700 flex items-center justify-center font-bold text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* List of Subjects */}
+            <div className="space-y-2.5 overflow-y-auto flex-1 pr-1 mb-4">
+              {state?.subjects?.map((sub: any) => {
+                const isActive = sub.id === currentSubjectId;
+                return (
+                  <div
+                    key={sub.id}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      isActive
+                        ? "bg-lav-50/80 border-lav-500 shadow-xs"
+                        : "bg-white border-lav-200/80 hover:border-lav-300"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-ink truncate">{sub.name}</span>
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-lav-100 text-lav-700">
+                          {sub.code}
+                        </span>
+                        {isActive && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-chart text-ink">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink/50 mt-0.5">
+                        {sub.docCount || 0} Documents &bull; {sub.topicCount || 0} Topics
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!isActive ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSwitchSubject(sub.id);
+                            setShowManageSubjectsModal(false);
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-lav-200 bg-white hover:bg-lav-100 text-lav-700 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Switch To
+                        </button>
+                      ) : (
+                        <span className="text-xs font-semibold text-lav-700 px-2 py-1">Selected</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubject(sub.id)}
+                        className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-colors cursor-pointer"
+                        title={`Delete ${sub.name}`}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quick Add Subject Box */}
+            <form onSubmit={handleAddSubject} className="p-3.5 bg-lav-50 rounded-2xl border border-lav-200/80 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="+ Create new subject (e.g. Physics, Law)..."
+                value={newSubjectName}
+                onChange={e => setNewSubjectName(e.target.value)}
+                className="flex-1 px-3 py-2 text-xs font-bold border border-lav-300 rounded-xl bg-white outline-none focus:border-lav-600"
+              />
+              <ActionBtn type="submit" variant="primary" className="text-xs py-2 px-3.5">
+                Add Subject
+              </ActionBtn>
             </form>
           </div>
         </div>

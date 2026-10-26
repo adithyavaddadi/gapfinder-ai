@@ -117,6 +117,8 @@ export async function POST(req: Request, { params }: { params: { op: string } })
         const file = form!.get("file") as File;
         const kind = String(form!.get("kind") || "notes");
         const subjectId = String(form!.get("subjectId") || "dbms");
+        const createNew = form!.get("createNewSubject") === "true";
+        const newSubjectName = String(form!.get("newSubjectName") || "").trim();
         const buf = Buffer.from(await file.arrayBuffer());
         let text = buf.toString("utf8");
         if (file.name.toLowerCase().endsWith(".pdf")) {
@@ -126,7 +128,7 @@ export async function POST(req: Request, { params }: { params: { op: string } })
             text = (await pdf(buf)).text;
           } catch {}
         }
-        return J(mockDb.upload(file.name, kind, text, subjectId));
+        return J(mockDb.upload(file.name, kind, text, subjectId, createNew, newSubjectName));
       }
       if (op === "topics") return J(mockDb.buildTopics(body.docId, body.subjectId));
       if (op === "quiz") return J(mockDb.getQuiz(body.topic, body.subjectId, body.count));

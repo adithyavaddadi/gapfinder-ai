@@ -466,22 +466,50 @@ class MockDb {
   }
 
   deleteSubject(subjectId: string) {
-    if (Object.keys(this.subjects).length <= 1) {
-      return { ok: false, error: "At least one subject must remain in your workspace." };
-    }
     delete this.subjects[subjectId];
-    if (this.currentSubjectId === subjectId) {
-      this.currentSubjectId = Object.keys(this.subjects)[0];
+    const remainingKeys = Object.keys(this.subjects);
+    if (remainingKeys.length === 0) {
+      // Re-initialize with a clean workspace subject so the app remains fully functional
+      const freshId = "general";
+      this.subjects[freshId] = {
+        id: freshId,
+        name: "General Studies",
+        code: "GEN101",
+        icon: "book",
+        docs: [],
+        topics: [
+          "Core Foundations & Principles",
+          "Key Methods & Applications",
+          "System Invariants & Rules",
+          "Review & Practice Problems"
+        ],
+        attempts: [],
+        answers: [],
+        plan: null,
+        uploadedTexts: [],
+        badges: JSON.parse(JSON.stringify(INITIAL_BADGES))
+      };
+      this.currentSubjectId = freshId;
+    } else if (this.currentSubjectId === subjectId) {
+      this.currentSubjectId = remainingKeys[0];
     }
     return {
       ok: true,
       currentSubjectId: this.currentSubjectId,
-      currentSubjectName: this.subjects[this.currentSubjectId]?.name
+      currentSubjectName: this.subjects[this.currentSubjectId]?.name,
+      subjects: Object.values(this.subjects).map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        code: sub.code,
+        docCount: sub.docs.length,
+        topicCount: sub.topics.length
+      }))
     };
   }
 
   addSubject(name: string, code?: string) {
-    const id = name.toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + Date.now().toString(36);
+    const cleanId = name.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "sub";
+    const id = this.subjects[cleanId] ? `${cleanId}-${Date.now().toString(36)}` : cleanId;
     const initialTopics = [
       `${name} Foundations & Core Principles`,
       `Architecture, Invariants & Modeling`,
@@ -492,33 +520,29 @@ class MockDb {
     this.subjects[id] = {
       id,
       name,
-      code: code || "SUB" + (Object.keys(this.subjects).length + 1),
+      code: code || ("SUB" + (Object.keys(this.subjects).length + 1)),
       icon: "book",
-      docs: [
-        {
-          id: "doc-" + id,
-          name: `${name} Standard Syllabus.txt`,
-          kind: "syllabus",
-          created_at: new Date().toISOString(),
-          subjectId: id,
-          sizeBytes: 1024
-        }
-      ],
+      docs: [],
       topics: initialTopics,
       attempts: [],
       answers: [],
       plan: null,
-      uploadedTexts: [
-        {
-          docId: "doc-" + id,
-          doc: `${name} Standard Syllabus.txt`,
-          text: `Unit 1: ${name} Foundations\nUnit 2: Architecture & Invariants\nUnit 3: Algorithms & Mechanics\nUnit 4: Verification & Integrity\nUnit 5: Optimization & Scaling`
-        }
-      ],
+      uploadedTexts: [],
       badges: JSON.parse(JSON.stringify(INITIAL_BADGES))
     };
     this.currentSubjectId = id;
-    return { ok: true, subject: this.subjects[id], currentSubjectId: id };
+    return {
+      ok: true,
+      subject: this.subjects[id],
+      currentSubjectId: id,
+      subjects: Object.values(this.subjects).map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        code: sub.code,
+        docCount: sub.docs.length,
+        topicCount: sub.topics.length
+      }))
+    };
   }
 
   getState(subjectId?: string) {
@@ -571,8 +595,15 @@ class MockDb {
     return { ok: true };
   }
 
-  upload(fileName: string, kind: string, text: string, subjectId?: string) {
-    const s = this.getCurrentSubject(subjectId);
+  upload(fileName: string, kind: string, text: string, subjectId?: string, createNewSubject?: boolean, newSubjectName?: string) {
+    let targetSubjectId = subjectId;
+    if (createNewSubject || (newSubjectName && newSubjectName.trim().length > 0)) {
+      const name = (newSubjectName && newSubjectName.trim()) || fileName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+      const subRes = this.addSubject(name);
+      targetSubjectId = subRes.currentSubjectId;
+    }
+
+    const s = this.getCurrentSubject(targetSubjectId);
     const docId = "doc-" + Date.now().toString(36);
     s.docs.push({
       id: docId,
@@ -593,11 +624,23 @@ class MockDb {
       }
     }
 
+    this.currentSubjectId = s.id;
+
     return {
       ok: true,
       docId,
+      currentSubjectId: s.id,
+      currentSubjectName: s.name,
+      currentSubjectCode: s.code,
       extractedTopicsCount: extracted.length,
-      topics: s.topics
+      topics: s.topics,
+      subjects: Object.values(this.subjects).map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        code: sub.code,
+        docCount: sub.docs.length,
+        topicCount: sub.topics.length
+      }))
     };
   }
 
