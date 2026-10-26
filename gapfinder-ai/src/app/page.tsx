@@ -153,13 +153,20 @@ function Icon({ name, className = "w-5 h-5" }: { name: string; className?: strin
 // Universal API invoker
 async function api(op: string, body?: any, form?: FormData) {
   let token = "demo-token";
+  try {
+    const saved = localStorage.getItem("gapfinder_demo_session");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.access_token) token = parsed.access_token;
+    }
+  } catch {}
+
   if (!isMock) {
-    const { data } = await sb.auth.getSession();
-    token = data.session?.access_token || "";
-  } else {
     try {
-      const saved = localStorage.getItem("gapfinder_demo_session");
-      if (saved) token = JSON.parse(saved).access_token || "demo-token";
+      const { data } = await sb.auth.getSession();
+      if (data?.session?.access_token) {
+        token = data.session.access_token;
+      }
     } catch {}
   }
 
@@ -227,25 +234,50 @@ export default function Home() {
   const [ses, setSes] = useState<any>(undefined);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("gapfinder_demo_session");
+      if (saved) {
+        setSes(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+
     if (isMock) {
-      try {
-        const saved = localStorage.getItem("gapfinder_demo_session");
-        if (saved) {
-          setSes(JSON.parse(saved));
-          return;
-        }
-      } catch {}
       setSes(null);
       return;
     }
 
-    sb.auth.getSession().then(({ data }) => setSes(data.session)).catch(() => setSes(null));
-    const { data } = sb.auth.onAuthStateChange((_, s) => setSes(s));
+    sb.auth.getSession().then(({ data }) => {
+      if (data?.session) {
+        setSes(data.session);
+      } else {
+        setSes((prev: any) => prev || null);
+      }
+    }).catch(() => setSes((prev: any) => prev || null));
+
+    const { data } = sb.auth.onAuthStateChange((event, s) => {
+      if (s) {
+        setSes(s);
+      } else if (event === "SIGNED_OUT") {
+        localStorage.removeItem("gapfinder_demo_session");
+        setSes(null);
+      }
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
+  const handleSignOut = async () => {
+    localStorage.removeItem("gapfinder_demo_session");
+    if (!isMock) {
+      try {
+        await sb.auth.signOut();
+      } catch {}
+    }
+    setSes(null);
+  };
+
   if (ses === undefined) return null;
-  return ses ? <App onSignOut={() => setSes(null)} /> : <Login onSignIn={(s: any) => setSes(s)} />;
+  return ses ? <App onSignOut={handleSignOut} /> : <Login onSignIn={(s: any) => setSes(s)} />;
 }
 
 // Advanced Login Screen
@@ -258,6 +290,28 @@ function Login({ onSignIn }: { onSignIn: (s: any) => void }) {
   const activeQuote = MOTIVATIONAL_QUOTES[quoteIdx];
 
   const handleAuth = async (isSignUp: boolean) => {
+    // If testing with demo user, seamlessly log in!
+    if (email === "demo@gapfinder.app" && !isSignUp) {
+      // First try Supabase password auth if not in mock
+      if (!isMock) {
+        try {
+          const res = await sb.auth.signInWithPassword({ email, password });
+          if (!res.error && res.data.session) {
+            onSignIn(res.data.session);
+            return;
+          }
+        } catch {}
+      }
+      // Instant demo session fallback
+      const demoSes = {
+        user: { email: "demo@gapfinder.app" },
+        access_token: "demo-token"
+      };
+      localStorage.setItem("gapfinder_demo_session", JSON.stringify(demoSes));
+      onSignIn(demoSes);
+      return;
+    }
+
     if (isMock) {
       const demoSes = {
         user: { email: email || "demo@gapfinder.app" },
@@ -269,11 +323,15 @@ function Login({ onSignIn }: { onSignIn: (s: any) => void }) {
     }
 
     try {
+      setMsg("");
       const res = isSignUp
         ? await sb.auth.signUp({ email, password })
         : await sb.auth.signInWithPassword({ email, password });
-      if (res.error) setMsg(res.error.message);
-      else if (isSignUp) setMsg("Account created. Please sign in.");
+      if (res.error) {
+        setMsg(res.error.message);
+      } else if (isSignUp) {
+        setMsg("Account created. Please sign in.");
+      }
     } catch (err: any) {
       setMsg(err.message || "Failed to authenticate.");
     }
