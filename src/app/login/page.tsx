@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 animate-pulse text-xs text-[#78716C]">Loading...</div>}>
+      <LoginContent />
+    </React.Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/dashboard";

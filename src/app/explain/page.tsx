@@ -36,6 +36,14 @@ interface ChatMessage {
 }
 
 export default function ExplainPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 animate-pulse text-xs text-[#78716C]">Loading Explain Assistant...</div>}>
+      <ExplainContent />
+    </React.Suspense>
+  );
+}
+
+function ExplainContent() {
   const searchParams = useSearchParams();
   const preselectedTopicId = searchParams.get("topicId");
 

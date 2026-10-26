@@ -3,7 +3,6 @@ import { getAuthenticatedUser } from "@/lib/supabase/server";
 import { retrieveRelevantChunks, validateCitations, GROUNDING_SYSTEM_PROMPT } from "@/lib/rag/retrieval";
 import { generateText } from "@/lib/ai/provider";
 
-export const runtime = "nodejs";
 export const maxDuration = 45;
 
 export async function POST(request: NextRequest) {

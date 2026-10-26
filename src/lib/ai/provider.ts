@@ -23,7 +23,7 @@ export const AI_CONFIG = {
   fallbackChatModels: ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"],
   embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
   embeddingDimensions: 768,
-  timeoutMs: 20000,
+  timeoutMs: 8000,
   maxRetries: 2,
 };
 

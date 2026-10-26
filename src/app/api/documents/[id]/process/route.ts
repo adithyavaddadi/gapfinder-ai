@@ -4,7 +4,6 @@ import { parseDocumentBuffer } from "@/lib/rag/parser";
 import { chunkDocument } from "@/lib/rag/chunker";
 import { generateEmbedding } from "@/lib/ai/provider";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(

@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthenticatedUser, createClient } from "@/lib/supabase/server";
 import { generateQuizForTopic } from "@/lib/quiz/generator";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {

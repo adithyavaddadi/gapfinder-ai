@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts",
+    "eval": "tsx scripts/eval.ts"
   },
   "dependencies": {
     "@google/genai": "^2.31.0",
@@ -34,6 +37,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }
 }

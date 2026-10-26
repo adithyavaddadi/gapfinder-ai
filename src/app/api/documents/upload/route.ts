@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthenticatedUser, createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
+
 
 export async function POST(request: NextRequest) {
   try {

@@ -58,6 +58,14 @@ interface ScoredFeedback {
 }
 
 export default function QuizPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 animate-pulse text-xs text-[#78716C]">Loading Diagnostic Quiz...</div>}>
+      <QuizContent />
+    </React.Suspense>
+  );
+}
+
+function QuizContent() {
   const searchParams = useSearchParams();
   const preselectedTopicId = searchParams.get("topicId");
 
