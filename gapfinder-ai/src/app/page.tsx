@@ -188,11 +188,12 @@ function GlassCard({
   onClick?: () => void;
   [key: string]: any;
 }) {
+  const isDark = className.includes("bg-lav-700") || className.includes("bg-ink") || className.includes("text-white");
   return (
     <div
       onClick={onClick}
       {...props}
-      className={`glass-panel rounded-2xl p-6 shadow-sm border border-lav-200/70 transition-all ${className}`}
+      className={`${isDark ? "glass-panel-dark" : "glass-panel"} rounded-2xl p-6 shadow-sm border border-lav-200/70 transition-all ${className}`}
     >
       {children}
     </div>
@@ -399,6 +400,21 @@ function Login({ onSignIn }: { onSignIn: (s: any) => void }) {
               <ActionBtn onClick={() => handleAuth(true)} variant="secondary" className="w-full py-2.5">
                 Create New Student Account
               </ActionBtn>
+              <button
+                type="button"
+                onClick={() => {
+                  const demoSes = {
+                    user: { email: "demo@gapfinder.app" },
+                    access_token: "demo-token"
+                  };
+                  localStorage.setItem("gapfinder_demo_session", JSON.stringify(demoSes));
+                  onSignIn(demoSes);
+                }}
+                className="w-full py-2.5 text-xs font-bold text-lav-700 bg-lav-100 hover:bg-lav-200 border border-lav-300 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+              >
+                <Icon name="sparkles" className="w-4 h-4 text-lav-700" />
+                ⚡ Instant Demo Access (1-Click Login)
+              </button>
             </div>
           </form>
 
@@ -1049,18 +1065,21 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   </div>
 
                   {/* Executive Syllabus & Course Brief Banner */}
-                  <div className="mb-5 p-4 md:p-5 rounded-2xl bg-gradient-to-r from-lav-900 via-ink to-lav-950 text-white shadow-md relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div
+                    className="mb-5 p-4 md:p-5 rounded-2xl text-white shadow-md relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                    style={{ backgroundColor: "#241F35", color: "#ffffff" }}
+                  >
                     <div className="relative z-10">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="px-2.5 py-0.5 rounded-full bg-chart/20 text-chart border border-chart/30 text-[10px] font-bold uppercase tracking-wider">
                           Syllabus Intelligence
                         </span>
-                        <span className="text-xs text-white/70">• Complete Course Orientation</span>
+                        <span className="text-xs text-white/80">• Complete Course Orientation</span>
                       </div>
                       <h3 className="text-base font-bold text-white font-display">
                         {state?.currentSubjectName} &bull; Executive Syllabus Brief
                       </h3>
-                      <p className="text-xs text-white/70 max-w-xl mt-1 leading-relaxed">
+                      <p className="text-xs text-white/80 max-w-xl mt-1 leading-relaxed">
                         Read a structured breakdown of what this subject is, what units exist, key concepts, prerequisites, and common exam pitfalls before taking tests.
                       </p>
                     </div>
@@ -1400,13 +1419,16 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   /* INTERACTIVE KNOWLEDGE TOPOLOGY & DEPENDENCY FLOW GRAPH */
                   <div className="space-y-4">
                     {/* Graph Legend & Study Order Guide */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-ink via-lav-950 to-ink text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                    <div
+                      className="p-4 rounded-2xl text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
+                      style={{ backgroundColor: "#241F35", color: "#ffffff" }}
+                    >
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-2.5 h-2.5 rounded-full bg-chart animate-ping" />
                           <h4 className="font-bold text-sm text-white font-display">Interlinked Prerequisite Learning Path</h4>
                         </div>
-                        <p className="text-xs text-white/70 max-w-xl">
+                        <p className="text-xs text-white/80 max-w-xl">
                           Topics are sequenced by conceptual dependencies. Study foundational prerequisites first before advancing to dependent invariants.
                         </p>
                       </div>
@@ -2184,12 +2206,15 @@ function App({ onSignOut }: { onSignOut: () => void }) {
               <div className="lg:col-span-4 space-y-6">
                 
                 {/* Adaptive Time Allocation Card */}
-                <GlassCard className="bg-lav-700 text-white relative overflow-hidden">
+                <div
+                  className="rounded-2xl p-6 shadow-md relative overflow-hidden text-white"
+                  style={{ backgroundColor: "#47328B", color: "#ffffff" }}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] uppercase font-bold text-chart tracking-wider">
                       Adaptive Time Budget
                     </span>
-                    <span className="text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-bold bg-white/20 text-white px-2.5 py-0.5 rounded-full">
                       {state?.plan?.totalHours || planHours * planDays} Total Hrs
                     </span>
                   </div>
@@ -2197,14 +2222,14 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                   <h3 className="font-bold text-base font-display text-white">
                     {planMode === "exam" ? "Exam Countdown Protocol" : "Paced Mastery Protocol"}
                   </h3>
-                  <p className="text-xs text-white/80 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-white/90 mt-1.5 leading-relaxed">
                     Prioritizes diagnosed weak topics with 60% of available study blocks.
                   </p>
 
                   {/* Priority Breakdown Matrix */}
                   <div className="mt-4 pt-3 border-t border-white/20 space-y-2.5 text-xs">
                     <div>
-                      <div className="flex justify-between text-white/80 mb-1">
+                      <div className="flex justify-between text-white/90 mb-1">
                         <span>Weak Topics (Deep Learning)</span>
                         <span className="font-bold text-chart">60% time</span>
                       </div>
@@ -2214,7 +2239,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-white/80 mb-1">
+                      <div className="flex justify-between text-white/90 mb-1">
                         <span>Medium Topics (Targeted Practice)</span>
                         <span className="font-bold text-chart">30% time</span>
                       </div>
@@ -2224,7 +2249,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-white/80 mb-1">
+                      <div className="flex justify-between text-white/90 mb-1">
                         <span>Strong Topics (Mock Check)</span>
                         <span className="font-bold text-chart">10% time</span>
                       </div>
@@ -2239,7 +2264,7 @@ function App({ onSignOut }: { onSignOut: () => void }) {
                     <span>Plan Progress</span>
                     <span>{stats.completedPct}% Complete</span>
                   </div>
-                </GlassCard>
+                </div>
 
                 {/* Daily Study Habits Checklist */}
                 <div className="p-5 rounded-2xl border border-lav-200 bg-white space-y-3">
