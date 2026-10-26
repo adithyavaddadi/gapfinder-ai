@@ -2,25 +2,24 @@
 
 ## Project Status: In Progress
 **Target Deadline**: Today 3 PM Hackathon Submission
-**Stack**: Next.js App Router (TypeScript strict), Tailwind CSS (Light Theme only, Violet #7C3AED accent, No Blue, No Dark Mode), Supabase (Postgres + pgvector + Auth + Storage), Gemini API (server-side only), Zod, Vitest.
+**Stack**: Next.js App Router (TypeScript strict), Tailwind CSS (Light Theme only, Violet #7C3AED accent, No Blue, No Dark Mode), Supabase (Postgres + pgvector 768 + Auth + Storage), Gemini API (server-side only), Zod, Vitest.
 
 ---
 
 ### Step 1: Foundation & Auth & Design System
-- [ ] Initialize Next.js project with TypeScript, Tailwind CSS, ESLint
-- [ ] Configure light design system in `tailwind.config.ts` & `globals.css` (Background `#FAF9F6`, Cards `#FFFFFF`, Border `#E7E5E4`, Text `#1C1917`, Accent Violet `#7C3AED`, Status Green `#16A34A` / Amber `#D97706` / Red `#DC2626` / Stone `#A8A29E`)
-- [ ] Install dependencies: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `lucide-react`, `framer-motion`, `recharts`, `clsx`, `tailwind-merge`
-- [ ] Create Supabase migration script `supabase/migrations/001_initial_schema.sql` (profiles, documents, document_chunks with pgvector 768, topics, topic_prerequisites, questions, quizzes, quiz_attempts, quiz_responses, topic_mastery, mastery_history, revision_plans, revision_tasks, audit_events, RLS policies, match_chunks SQL function)
-- [ ] Build shared component library: Button, Card, Badge, Modal, Drawer, Tabs, Skeleton, Toast, EmptyState, ProgressBar, ScoreRing
-- [ ] Build App Shell (Sidebar navigation, topbar with breadcrumbs & Next Best Action, Demo banner)
-- [ ] Build Landing Page (Hero, How It Works, Features, Gap Diagnosis vs Chat comparison, CTA)
-- [ ] Build Auth pages (Sign In, Sign Up, Password Reset, Try Demo link)
-- [ ] Build Supabase auth middleware & server-side auth verification helpers
-- [ ] **ASK USER for Supabase URL, Anon Key, and Service-Role Key**
+- [x] Initialize Next.js project with TypeScript, Tailwind CSS, ESLint
+- [x] Configure light design system in `globals.css` (Background `#FAF9F6`, Cards `#FFFFFF`, Border `#E7E5E4`, Text `#1C1917`, Accent Violet `#7C3AED`, Status Green `#16A34A` / Amber `#D97706` / Red `#DC2626` / Stone `#A8A29E`)
+- [x] Install dependencies: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `lucide-react`, `framer-motion`, `recharts`, `clsx`, `tailwind-merge`, `@google/genai`, `pdf-parse`, `vitest`
+- [x] Create Supabase migration script `supabase/migrations/001_initial_schema.sql` (profiles, documents, document_chunks with pgvector 768, topics, topic_prerequisites, questions, quizzes, quiz_attempts, quiz_responses, topic_mastery, mastery_history, revision_plans, revision_tasks, audit_events, RLS policies, match_chunks SQL function)
+- [x] Build shared component library: Button, Card, Badge, Modal, Drawer, Tabs, Skeleton, Toast, EmptyState, ProgressBar, ScoreRing
+- [x] Build App Shell (Sidebar navigation, topbar with breadcrumbs & Next Best Action, Demo banner)
+- [x] Build Landing Page (Hero, How It Works, Features, Gap Diagnosis vs Chat comparison, CTA)
+- [x] Build Auth pages (Sign In, Sign Up, Instant Demo entry route)
+- [x] Build Supabase auth middleware & server-side auth verification helpers
+- [ ] **AWAITING USER INPUT**: Supabase URL, Anon Key, and Service-Role Key (plus Gemini API Key & Demo credentials)
 
 ### Step 2: Ingestion & Real RAG Pipeline
-- [ ] **ASK USER for Gemini API Key**
-- [ ] Create AI provider wrapper `src/lib/ai/provider.ts` (Gemini text-embedding-004 768-dim, Gemini 1.5/2.5 Flash chat models, retry backoff, timeouts)
+- [ ] AI provider wrapper `src/lib/ai/provider.ts` (Gemini text-embedding-004 768-dim, Gemini 1.5/2.5 Flash chat models, retry backoff, timeouts)
 - [ ] PDF & TXT parser utility (text extraction, page numbering, scanned PDF detection)
 - [ ] Document chunker (headings/paragraphs, ~800 chars, ~100 overlap, rich metadata)
 - [ ] Upload API & processing pipeline (`/api/documents/upload`, `/api/documents/[id]/process`, private storage, status tracking)
@@ -64,7 +63,6 @@
 - [ ] Empty states for new users ("Take your first diagnostic")
 
 ### Step 9: Realistic DBMS Demo Dataset & Seed Script
-- [ ] **ASK USER for DEMO_EMAIL and DEMO_PASSWORD**
 - [ ] Create real DBMS study materials: Functional Dependencies, Normalization (1NF-BCNF), SQL Joins, Transactions/ACID
 - [ ] Seed script (`scripts/seed.ts`): processes real documents through real pipeline, embeds real chunks, seeds baseline quiz with realistic errors in Normalization/FD, generates Gap Report, Plan, and Retest
 - [ ] One-click "Try Demo" login flow
@@ -86,5 +84,4 @@
 - [ ] Build `docs/API.md`, `docs/LIMITATIONS.md`, `docs/DEMO.md`
 - [ ] Comprehensive README with setup guide, demo credentials, screenshot placeholders
 - [ ] Visual QA pass at 375px, 768px, 1280px (fix top 10 UI issues)
-- [ ] **ASK USER for GitHub repo / Vercel credentials for deployment**
 - [ ] Final verification & honest summary report
