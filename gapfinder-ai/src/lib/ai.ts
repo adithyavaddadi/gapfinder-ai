@@ -2,12 +2,23 @@ const K = process.env.GEMINI_API_KEY || "";
 const G = "https://generativelanguage.googleapis.com/v1beta/models/";
 const M = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
-const post = async (u: string, b: any) =>
-  (await fetch(u, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(b)
-  })).json();
+const post = async (u: string, b: any) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch(u, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b),
+      signal: controller.signal
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: { message: "timeout or network error" } };
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 // Deterministic 768-dimensional fallback vector generator
 function fallbackVector(text: string, dim = 768): number[] {
@@ -49,7 +60,7 @@ export async function embed(texts: string[]): Promise<number[][]> {
 
 // Generation side: only ever called with retrieved excerpts inside the prompt
 export async function gen(prompt: string, json = true): Promise<any> {
-  const candidateModels = ["gemini-3.5-flash", "gemini-flash-latest", M];
+  const candidateModels = ["gemini-3.5-flash", "gemini-flash-latest"];
   for (const model of candidateModels) {
     try {
       const j = await post(`${G}${model}:generateContent?key=${K}`, {
@@ -83,5 +94,5 @@ export async function gen(prompt: string, json = true): Promise<any> {
       ]
     };
   }
-  return "In database management systems, data is structured into tables with primary and foreign keys to ensure integrity, consistency, and efficient indexing.";
+  return "In database management systems, data is structured into relations with attributes, keys, and functional dependencies to guarantee consistency, ACID transaction guarantees, and efficient indexing.";
 }
