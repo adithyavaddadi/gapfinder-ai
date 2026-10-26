@@ -94,5 +94,5 @@ export async function gen(prompt: string, json = true): Promise<any> {
       ]
     };
   }
-  return "In database management systems, data is structured into relations with attributes, keys, and functional dependencies to guarantee consistency, ACID transaction guarantees, and efficient indexing.";
+  return null;
 }

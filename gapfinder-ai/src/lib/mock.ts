@@ -907,25 +907,115 @@ class MockDb {
 
   chat(query: string, subjectId?: string) {
     const s = this.getCurrentSubject(subjectId);
-    const qLower = query.toLowerCase();
+    const qLower = query.toLowerCase().trim();
+
+    // 1. Core Subject Knowledge Encyclopedia for Computer Science & DBMS
+    const KNOWLEDGE_BASE: Array<{
+      match: (q: string) => boolean;
+      answer: string;
+      cite: string;
+    }> = [
+      {
+        match: q => q.includes("primary key") || q.includes("primary_key"),
+        answer: "A **Primary Key** is a minimal column (or set of columns) in a relational table chosen to uniquely identify each tuple (row).\n\n• **Uniqueness**: No two rows can share the exact same primary key value.\n• **Non-Null**: Under the **Entity Integrity Rule**, a primary key cannot be NULL.\n• **Single per Table**: Each table can have only one primary key, selected from among candidate keys.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Relational Model & Keys`
+      },
+      {
+        match: q => q.includes("null key") || q.includes("null in key") || q.includes("can key be null"),
+        answer: "In relational database theory, there is strictly **no such thing as a 'Null Key'** as a primary identifier. Specifically:\n\n• **Primary Keys CANNOT be NULL**: By the **Entity Integrity Constraint**, primary keys must be fully defined and non-null for all tuples.\n• **Foreign Keys MAY be NULL**: A foreign key can contain NULL if the relationship represents optional participation.\n• **Unique Constraints**: In SQL systems, a column with a `UNIQUE` constraint may permit NULL values (representing unknown data), but a primary key never does.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Integrity Constraints`
+      },
+      {
+        match: q => q.includes("foreign key"),
+        answer: "A **Foreign Key** is an attribute (or group of attributes) in one table that references the Primary Key of another table.\n\n• **Referential Integrity**: Guarantees that values in the referencing column must match an existing primary key value in the referenced table, or be set to NULL.\n• **Relationships**: Enforces 1:1, 1:N, and N:M relationships and cascades updates/deletions.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Referential Integrity`
+      },
+      {
+        match: q => q.includes("candidate key") || q.includes("super key"),
+        answer: "• **Superkey**: Any set of attributes that uniquely identifies a row in a table.\n• **Candidate Key**: A **minimal superkey** — meaning no proper subset of its attributes can uniquely identify a row. A table can have multiple candidate keys, from which one is chosen as the Primary Key.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Candidate Keys & Superkeys`
+      },
+      {
+        match: q => q.includes("normalization") || q.includes("normal form") || q.includes("1nf") || q.includes("2nf") || q.includes("3nf") || q.includes("bcnf"),
+        answer: "**Normalization** systematically reorganizes database tables to eliminate redundancy and prevent update, insert, and delete anomalies:\n\n• **1NF**: Atomic values only (no repeating groups or arrays).\n• **2NF**: In 1NF + No partial dependencies (all non-prime attributes depend on the entire candidate key).\n• **3NF**: In 2NF + No transitive dependencies (no non-prime attribute determines another non-prime attribute).\n• **BCNF**: For every non-trivial functional dependency $X \\to Y$, $X$ must be a superkey.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Normalization`
+      },
+      {
+        match: q => q.includes("acid") || q.includes("transaction"),
+        answer: "The **ACID Properties** govern reliable transaction processing in database management systems:\n\n• **Atomicity**: 'All-or-nothing' execution. If any operation fails, the entire transaction is rolled back.\n• **Consistency**: The database transitions from one valid state to another, strictly satisfying all schema invariants.\n• **Isolation**: Concurrent transactions execute as if running sequentially (managed via 2PL or snapshot isolation).\n• **Durability**: Once committed, updates survive system reboots and crashes (enforced by Write-Ahead Logging / WAL).",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Transactions & Concurrency`
+      },
+      {
+        match: q => q.includes("index") || q.includes("b+ tree") || q.includes("b tree"),
+        answer: "**Indexing** is an auxiliary data structure that accelerates record retrieval, avoiding full table scans:\n\n• **B+ Tree Index**: Self-balancing search tree where all data pointers reside in leaf nodes, linked sequentially for lightning-fast range queries ($O(\\log N)$ lookup).\n• **Hash Index**: Uses hash functions for instant $O(1)$ equality searches, but does not support range scans.\n• **Clustered vs Non-Clustered**: A clustered index determines the physical storage order of the rows.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Storage & Indexing`
+      },
+      {
+        match: q => q.includes("relational algebra") || q.includes("join") || q.includes("projection") || q.includes("selection"),
+        answer: "**Relational Algebra** is the formal procedural query language underlying SQL:\n\n• **Selection ($\\sigma$)**: Filters rows satisfying a predicate condition.\n• **Projection ($\\pi$)**: Extracts specified attribute columns while eliminating duplicates.\n• **Natural Join ($\\bowtie$)**: Combines tuples from two relations matching on common attribute names.\n• **Cartesian Product ($\\times$)**: Pairs every tuple of relation R with every tuple of relation S.",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Relational Algebra`
+      },
+      {
+        match: q => q.includes("what is dbms") || q.includes("what is database") || q.includes("database management"),
+        answer: "A **Database Management System (DBMS)** is specialized system software designed to create, maintain, query, and administer structured collections of data.\n\n• **Core Benefits**: Data independence, concurrent access control, crash recovery, declarative query processing (SQL), and enterprise security.\n• **Major Models**: Relational (RDBMS like PostgreSQL), Document (MongoDB), Key-Value (Redis), and Graph (Neo4j).",
+        cite: `${s.docs[0]?.name || "DBMS Notes"} §Course Orientation`
+      }
+    ];
+
+    // Check specific knowledge base first
+    for (const entry of KNOWLEDGE_BASE) {
+      if (entry.match(qLower)) {
+        return {
+          a: entry.answer,
+          cites: [`[1] ${entry.cite}`]
+        };
+      }
+    }
+
+    // 2. Intelligent Scoring across Uploaded Texts
+    let bestParagraph = "";
+    let bestScore = 0;
+    let bestDoc = s.docs[0]?.name || "Course Notes";
+    let bestSection = 1;
+
+    const queryWords = qLower
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !["what", "is", "the", "are", "how", "can", "why", "explain", "describe"].includes(w));
 
     for (const item of s.uploadedTexts) {
       const paragraphs = item.text.split(/\n\s*\n/);
       for (let i = 0; i < paragraphs.length; i++) {
-        const p = paragraphs[i];
-        const words = qLower.split(/\s+/).filter(w => w.length > 3);
-        const match = words.some(w => p.toLowerCase().includes(w));
-        if (match) {
-          return {
-            a: p.trim(),
-            cites: [`[1] ${item.doc} §${i + 1}`]
-          };
+        const p = paragraphs[i].trim();
+        if (p.length < 20) continue;
+        const pLower = p.toLowerCase();
+        
+        let score = 0;
+        for (const w of queryWords) {
+          if (pLower.includes(w)) score += 2;
+        }
+        if (queryWords.length > 1 && pLower.includes(queryWords.join(" "))) {
+          score += 5;
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestParagraph = p;
+          bestDoc = item.doc;
+          bestSection = i + 1;
         }
       }
     }
 
+    if (bestScore > 0 && bestParagraph) {
+      return {
+        a: bestParagraph,
+        cites: [`[1] ${bestDoc} §${bestSection}`]
+      };
+    }
+
     return {
-      a: `Based on your ${s.name} course notes: "${query}" relates to core principles. Check your syllabus for unit definitions and review notes under ${s.topics[0] || "Unit 1"}.`,
+      a: `In ${s.name}: regarding **"${query}"**, refer to core syllabus guidelines. In database theory, ensure you review relation constraints, functional dependencies, and indexing strategies under ${s.topics[0] || "Unit 1"}.`,
       cites: [`[1] ${s.docs[0]?.name || "Course Notes"} §1`]
     };
   }
